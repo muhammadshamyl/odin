@@ -41,12 +41,14 @@
     <g><rect class="node" x="778" y="128" width="124" height="40" rx="4"/>
       <text class="nlabel" x="840" y="152" text-anchor="middle">Business</text></g>
 
-    <path class="div q" d="M652 78 V120 H470 V150"/>
-    <path class="div w" d="M652 78 V134 H636 V150"/>
-    <g><rect class="qbox" x="392" y="150" width="156" height="40" rx="4"/>
+    <path class="div q{% if state.quarantine == 'running' %} live{% endif %}" d="M652 78 V120 H470 V150"/>
+    <path class="div w{% if state.waiting == 'running' %} live{% endif %}" d="M652 78 V134 H636 V150"/>
+    <g class="lg qn s-{{ state.quarantine or 'idle' }}">
+      <rect class="qbox" x="392" y="150" width="156" height="40" rx="4"/>
       <text class="nlabel" x="470" y="167" text-anchor="middle" style="fill:var(--warn)">Quarantine</text>
       <text class="nsub" x="470" y="181" text-anchor="middle">{{ quarantine|length }} open</text></g>
-    <g><rect class="wbox" x="558" y="150" width="156" height="40" rx="4"/>
+    <g class="lg wn s-{{ state.waiting or 'idle' }}">
+      <rect class="wbox" x="558" y="150" width="156" height="40" rx="4"/>
       <text class="nlabel" x="636" y="167" text-anchor="middle" style="fill:var(--info)">Waiting</text>
       <text class="nsub" x="636" y="181" text-anchor="middle">{{ waiting|length }} pending</text></g>
   </svg>

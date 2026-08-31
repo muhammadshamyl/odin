@@ -48,7 +48,9 @@ Provides full observability across the pipeline infrastructure. Tracks execution
   (fired by the extract / transform / load POSTs) plus an `every Ns` tick while a
   job for that table is active:
   `_runs_panel.html` (the run log), `_lineage.html` + `GET /partials/lineage/…`
-  (animated pipeline diagram with live staging / production row counts), and
+  (animated pipeline diagram — every node glows for its state, including the
+  **Quarantine / Waiting** boxes, which pulse amber / blue while a transform runs
+  and stay lit while their batch table holds rows), and
   `_data_stats.html` + `GET /partials/stats/…` (the table page's
   staging / production / waiting / quarantine KPI cards — previously static, so a
   run left them stale until a full page reload).

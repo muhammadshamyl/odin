@@ -197,13 +197,18 @@ def _recent_runs(source_id: str | None = None, table_name: str | None = None,
     return rows
 
 
-def _pipeline_stage_state(source_id: str, table: str) -> dict:
+def _pipeline_stage_state(source_id: str, table: str, *,
+                          waiting_open: int = 0, quarantine_open: int = 0) -> dict:
     """Per-node state for the animated lineage on the table page: where is the
     most recent run right now? Node values: 'running' | 'done' | 'failed' | None.
-    Falls back to live jobs for the beat before the first run_log row lands."""
+    Falls back to live jobs for the beat before the first run_log row lands.
+    The waiting / quarantine diversions glow while a transform runs (rows may be
+    routing there) and settle to 'done' when the batch table actually holds
+    something, else idle."""
     runs = _recent_runs(source_id, table, 1)
-    ex = runs[0]["extract_state"] if runs else None
-    tr = runs[0]["transform_state"] if runs else None
+    r0 = runs[0] if runs else {}
+    ex = r0.get("extract_state")
+    tr = r0.get("transform_state")
     for j in jobs.active():
         if j.source_id != source_id or j.table_name != table:
             continue
@@ -216,12 +221,18 @@ def _pipeline_stage_state(source_id: str, table: str) -> dict:
         return "done" if s == "success" else s  # 'running' / 'failed' / None pass
 
     ex, tr = d(ex), d(tr)
+    to_waiting = r0.get("rows_to_waiting") or 0
+    to_quarantined = r0.get("rows_quarantined") or 0
     return {
         "source": "done" if (runs or ex) else None,
         "extract": ex,
         "staging": "done" if ex == "done" else ("running" if ex == "running" else None),
         "transform": tr,
         "production": "done" if tr == "done" else ("running" if tr == "running" else None),
+        "waiting": "running" if tr == "running"
+                   else ("done" if (waiting_open or to_waiting) else None),
+        "quarantine": "running" if tr == "running"
+                      else ("done" if (quarantine_open or to_quarantined) else None),
     }
 
 
@@ -507,7 +518,11 @@ def table_detail(request: Request, source_id: str, table: str):
                    staging_count=_count_safe(cfg.staging_target),
                    dereg=registry.deregister_plan(source_id, table),
                    panel_url=_panel_url(source_id, table),
-                   state=_pipeline_stage_state(source_id, table), polling=live)
+                   state=_pipeline_stage_state(
+                       source_id, table,
+                       waiting_open=resolve.count_pending_waiting(source_id, table),
+                       quarantine_open=resolve.count_open_quarantine(source_id, table),
+                   ), polling=live)
 
 
 @app.get("/partials/lineage/{source_id}/{table}", response_class=HTMLResponse)
@@ -518,10 +533,14 @@ def partial_lineage(request: Request, source_id: str, table: str):
         return HTMLResponse("", status_code=404)
     live = any(j.source_id == source_id and j.table_name == table
                for j in jobs.active())
+    waiting = resolve.pending_waiting(source_id, table)
+    quarantine = resolve.open_quarantine(source_id, table)
     return _render(request, "_lineage.html", cfg=cfg,
-                   state=_pipeline_stage_state(source_id, table),
-                   waiting=resolve.pending_waiting(source_id, table),
-                   quarantine=resolve.open_quarantine(source_id, table),
+                   state=_pipeline_stage_state(
+                       source_id, table,
+                       waiting_open=len(waiting), quarantine_open=len(quarantine),
+                   ),
+                   waiting=waiting, quarantine=quarantine,
                    staging_count=_count_safe(cfg.staging_target),
                    prod_count=_count_safe(cfg.production_target),
                    polling=live)

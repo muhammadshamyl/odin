@@ -620,6 +620,25 @@ form.inline{display:inline-block; margin-right:.5rem}
 }
 #lineage-panel g.s-failed .nlabel{fill:var(--danger)}
 
+/* the two diversions light up in their own colour (amber / blue), not accent */
+#lineage-panel g.qn.s-running rect,#lineage-panel g.qn.s-done rect{stroke:var(--warn); fill:var(--warn-soft)}
+#lineage-panel g.wn.s-running rect,#lineage-panel g.wn.s-done rect{stroke:var(--info); fill:var(--info-soft)}
+#lineage-panel g.qn.s-running rect{stroke-width:2.4; animation:node-glow-warn 1.5s var(--ease) infinite}
+#lineage-panel g.wn.s-running rect{stroke-width:2.4; animation:node-glow-info 1.5s var(--ease) infinite}
+#lineage-panel g.qn.s-running .nsub,#lineage-panel g.qn.s-done .nsub{fill:var(--warn); opacity:.8}
+#lineage-panel g.wn.s-running .nsub,#lineage-panel g.wn.s-done .nsub{fill:var(--info); opacity:.8}
+#lineage-panel .div.q.live,#lineage-panel .div.w.live{stroke-width:2.6; animation:dash .7s linear infinite}
+#lineage-panel .div.q.live{filter:drop-shadow(0 0 3px var(--warn)) drop-shadow(0 0 7px color-mix(in srgb,var(--warn) 55%,transparent))}
+#lineage-panel .div.w.live{filter:drop-shadow(0 0 3px var(--info)) drop-shadow(0 0 7px color-mix(in srgb,var(--info) 55%,transparent))}
+
+@keyframes node-glow-warn{
+  0%,100%{filter:drop-shadow(0 0 2px var(--warn)); stroke-opacity:.75}
+  50%{filter:drop-shadow(0 0 7px var(--warn)) drop-shadow(0 0 15px color-mix(in srgb,var(--warn) 55%,transparent)); stroke-opacity:1}
+}
+@keyframes node-glow-info{
+  0%,100%{filter:drop-shadow(0 0 2px var(--info)); stroke-opacity:.75}
+  50%{filter:drop-shadow(0 0 7px var(--info)) drop-shadow(0 0 15px color-mix(in srgb,var(--info) 55%,transparent)); stroke-opacity:1}
+}
 @keyframes node-glow{
   0%,100%{
     filter:drop-shadow(0 0 2px var(--accent));
@@ -636,10 +655,16 @@ form.inline{display:inline-block; margin-right:.5rem}
 }
 @media (prefers-reduced-motion:reduce){
   #lineage-panel g.s-running rect,
-  #lineage-panel .flow.live{animation:none}
+  #lineage-panel g.qn.s-running rect,
+  #lineage-panel g.wn.s-running rect,
+  #lineage-panel .flow.live,
+  #lineage-panel .div.q.live,
+  #lineage-panel .div.w.live{animation:none}
   #lineage-panel g.s-running rect{
     filter:drop-shadow(0 0 6px var(--accent)) drop-shadow(0 0 14px var(--accent-glow));
   }
+  #lineage-panel g.qn.s-running rect{filter:drop-shadow(0 0 6px var(--warn))}
+  #lineage-panel g.wn.s-running rect{filter:drop-shadow(0 0 6px var(--info))}
 }
 .lineage-legend{display:flex; gap:14px; margin-top:8px; padding-left:2px}
 .lineage-legend .lg-key{display:inline-flex; align-items:center; gap:6px}
