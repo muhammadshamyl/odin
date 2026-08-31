@@ -132,8 +132,10 @@ CREATE TABLE waiting_batch_log (
 ```
 
 - The review tool shows the pending batch's label and row count, and previews the waiting rows against production's current rows for the same value / key.
-- **Approve** → delete the production rows the batch supersedes — by `E = :existence_value` (single column) or by `p.nk = w.nk AND <tie-break>` (natural key) — then insert the waiting rows for that `wbatch_id` with `restated = true`; clear them from `waiting.<…>`; `waiting_batch_log.status = 'approved'`.
+- **Approve** (replace) → delete the production rows the batch supersedes — by `E = :existence_value` (single column) or `p.nk = w.nk AND <tie-break>` (natural key) — then insert the waiting rows with `restated = true`; clear `waiting.<…>`; `status = 'approved'`.
+- **Merge** (keep both) → insert the waiting rows into production *alongside* the existing ones, no delete, `restated = false`; clear `waiting.<…>`; `status = 'merged'`. For a collision that is a genuine additional record.
 - **Reject** → delete the rows for that `wbatch_id` from `waiting.<…>`; `status = 'rejected'`. Production keeps what it had.
+- `waiting_batch_log.status ∈ (pending, approved, merged, rejected)` — `merged` added by `sql/005_waiting_merge.sql`.
 - Holds only *unresolved* batches — the permanent record is the append-only source file, which this never touches.
 
 ### 4.8 Business Range / Value Rules (SOFT by default)

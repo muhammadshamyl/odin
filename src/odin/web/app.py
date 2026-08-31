@@ -694,6 +694,16 @@ def waiting_approve(request: Request, wbatch_id: str, by: str = Form(""),
     return _resolve_panel(request, "waiting", source, table, page, act)
 
 
+@app.post("/waiting/{wbatch_id}/merge")
+def waiting_merge(request: Request, wbatch_id: str, by: str = Form(""),
+                  source: str = Form(""), table: str = Form(""), page: int = Form(1)):
+    def act():
+        r = resolve.merge_waiting(wbatch_id, resolved_by=(by or None))
+        return (f"Merged {wbatch_id[:8]} — kept existing, added "
+                f"{r['production_rows_inserted']} row(s)")
+    return _resolve_panel(request, "waiting", source, table, page, act)
+
+
 @app.post("/waiting/{wbatch_id}/reject")
 def waiting_reject(request: Request, wbatch_id: str, by: str = Form(""),
                    source: str = Form(""), table: str = Form(""), page: int = Form(1)):

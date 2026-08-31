@@ -69,8 +69,13 @@
       <button class="btn sm ok" hx-post="/waiting/{{ w.wbatch_id }}/approve"
         hx-target="#waiting-panel" hx-swap="outerHTML" hx-disabled-elt="this"
         hx-vals='{"source": {{ p.source|tojson }}, "table": {{ p.table|tojson }}, "page": {{ p.page }}}'
-        hx-confirm="Approve {{ w.wbatch_id[:8] }} — replace production's {{ w.row_count }} row(s) for {{ w.existence_value }} and mark them restated?"
+        hx-confirm="Approve {{ w.wbatch_id[:8] }} — replace production's row(s) for this key with the {{ w.row_count }} held row(s) and mark them restated?"
         data-confirm-label="Approve"><span class="spin"></span>Approve</button>
+      <button class="btn sm" hx-post="/waiting/{{ w.wbatch_id }}/merge"
+        hx-target="#waiting-panel" hx-swap="outerHTML" hx-disabled-elt="this"
+        hx-vals='{"source": {{ p.source|tojson }}, "table": {{ p.table|tojson }}, "page": {{ p.page }}}'
+        hx-confirm="Merge {{ w.wbatch_id[:8] }} — keep production's existing row(s) and add these {{ w.row_count }} held row(s) alongside them?"
+        data-confirm-label="Merge"><span class="spin"></span>Merge</button>
       <button class="btn sm danger" hx-post="/waiting/{{ w.wbatch_id }}/reject"
         hx-target="#waiting-panel" hx-swap="outerHTML" hx-disabled-elt="this"
         hx-vals='{"source": {{ p.source|tojson }}, "table": {{ p.table|tojson }}, "page": {{ p.page }}}'

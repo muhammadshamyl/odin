@@ -21,7 +21,7 @@ uv run python -m odin.migrate                # apply sql/*.sql to $ODIN_DATABASE
 | **Transform** — set-based structural filter → quarantine → load-type routing → truncate | 4/6 | ✅ `odin/transform.py` |
 | **INCREMENTAL routing** — single `existence_check_column`, or a **composite natural key** (hashed `nk bigint` + index, one set-based join) | 3/4/6 | ✅ `odin/ddl.py`, `transform._load_incremental_nk` |
 | **Physical naming** — one schema per layer, table = slugged DE name, globally unique | 3 | ✅ `odin/naming.py`, `sql/004` |
-| **Resolve** — waiting approve/reject, quarantine re-inject/ignore | 4/10 | ✅ `odin/resolve.py` |
+| **Resolve** — waiting approve (replace) / merge (keep both) / reject, quarantine re-inject/ignore | 4/10 | ✅ `odin/resolve.py` |
 | **Production re-typing** — test-cast every value, then rebuild the table in place | 3/6 | ✅ `registry.retype_table` |
 | **CLI** — `onboard` / `run-extract` / `run-transform` / `ingest` / `runs` / `waiting` / `quarantine` / `web` | 10 | ✅ `odin/cli.py` |
 | **Web UI** — deck, onboard wizard, table page (Load to Production, lineage, delete pipeline), run log, waiting + quarantine review | 10 | ✅ `odin/web/` |
@@ -41,7 +41,8 @@ uv run odin onboard --name "ERP Sales" --table sales \
 uv run odin ingest erp_sales sales data/sales_sample.csv      # extract + transform
 uv run odin runs --source erp_sales
 uv run odin waiting list --source erp_sales
-uv run odin waiting approve <wbatch_id> --by you@example.com
+uv run odin waiting approve <wbatch_id> --by you@example.com   # replace
+uv run odin waiting merge   <wbatch_id> --by you@example.com   # keep both
 uv run odin quarantine list --source erp_sales
 uv run odin quarantine reinject <qbatch_id>
 ```
@@ -61,7 +62,7 @@ column types → create, optionally run now), **table page** (config, **Load to 
 one-click extract→transform, animated lineage, self-refreshing KPI cards, re-typing,
 per-table waiting/quarantine/runs, delete-pipeline danger zone; standalone extract /
 transform under "Manual steps"), **Runs** (filterable run log), **Waiting** / **Quarantine**
-review (held rows vs production side by side → approve/reject / re-inject/ignore),
+review (held rows vs production side by side → approve (replace) / merge (keep both) / reject / re-inject/ignore),
 **SQL Console** (`/sql` — guard-railed ad-hoc SQL). Every action calls the same functions
 as the CLI.
 

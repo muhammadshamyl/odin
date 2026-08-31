@@ -11,7 +11,7 @@
     odin ingest        <source_id> <table> <file>      # run-extract then run-transform
     odin runs [--source S] [--table T] [--limit N]
     odin waiting    list [--source S] [--table T]
-    odin waiting    approve|reject  <wbatch_id> [--by WHO]
+    odin waiting    approve|merge|reject  <wbatch_id> [--by WHO]
     odin quarantine list [--source S] [--table T]
     odin quarantine reinject|ignore <qbatch_id> [--by WHO]
     odin web [--host H] [--port P] [--reload]
@@ -212,6 +212,8 @@ def cmd_waiting(args) -> None:
                       "row_count", "status", "created_at"])
     elif args.action == "approve":
         _result(resolve.approve_waiting(args.wbatch_id, resolved_by=args.by), args.json)
+    elif args.action == "merge":
+        _result(resolve.merge_waiting(args.wbatch_id, resolved_by=args.by), args.json)
     elif args.action == "reject":
         _result(resolve.reject_waiting(args.wbatch_id, resolved_by=args.by), args.json)
 
@@ -298,7 +300,7 @@ def build_parser() -> argparse.ArgumentParser:
     wl = ws.add_parser("list")
     wl.add_argument("--source")
     wl.add_argument("--table")
-    for name in ("approve", "reject"):
+    for name in ("approve", "merge", "reject"):
         wa = ws.add_parser(name)
         wa.add_argument("wbatch_id")
         wa.add_argument("--by", help="resolved_by")

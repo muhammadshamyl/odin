@@ -12,7 +12,7 @@
     <p class="sub">Held rows whose <span class="mono">{{ wb.existence_value }}</span> already exists in production. The comparison below is computed — counts always, plus sum / min / max for every numeric-typed column. No column is hand-picked.</p>
   </div>
   <div class="grow"></div>
-  <span class="pill {{ 'info' if wb.status == 'pending' else ('ok' if wb.status == 'approved' else 'danger') }}"><span class="dot"></span>{{ wb.status }}</span>
+  <span class="pill {{ 'info' if wb.status == 'pending' else ('ok' if wb.status in ('approved', 'merged') else 'danger') }}"><span class="dot"></span>{{ wb.status }}</span>
 </div>
 
 <div class="grid g-2-1">
@@ -32,10 +32,14 @@
       <div style="margin-top:8px">{{ compare_grid(compare) }}</div>
 
       {% if wb.status == 'pending' %}
-      <div class="btn-row" style="margin-top:16px">
+      <div class="btn-row" style="margin-top:16px; gap:8px; flex-wrap:wrap">
         <form class="inline" action="/waiting/{{ wb.wbatch_id }}/approve" method="post">
           <input name="by" placeholder="your name" style="max-width:11rem; display:inline-block; margin-right:.5rem">
           <button class="btn ok" type="submit">Approve — replace &amp; restate</button>
+        </form>
+        <form class="inline" action="/waiting/{{ wb.wbatch_id }}/merge" method="post"
+              onsubmit="return confirm('Merge — keep the existing production row(s) and add these {{ wb.row_count }} held row(s) alongside them?')">
+          <button class="btn" type="submit">Merge — keep both</button>
         </form>
         <form class="inline" action="/waiting/{{ wb.wbatch_id }}/reject" method="post">
           <button class="btn danger" type="submit">Reject — drop batch</button>
@@ -46,11 +50,15 @@
   </div>
 
   <div class="panel marked">
-    <div class="panel-h"><h3>What approve does</h3></div>
+    <div class="panel-h"><h3>What each action does</h3></div>
     <div class="pad">
       <div class="note">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
-        <span>Deletes production's rows for <span class="mono">{{ wb.existence_value }}</span>, reinserts these held rows with <span class="mono">restated = true</span>, and marks the batch approved. <b>Reject</b> drops the held rows; production keeps what it had.</span>
+        <span>
+          <b>Approve</b> — deletes production's row(s) for this key, reinserts the held rows with <span class="mono">restated = true</span>; batch → <span class="mono">approved</span>.<br>
+          <b>Merge</b> — keeps the existing row(s) and inserts the held rows alongside (<span class="mono">restated = false</span>); batch → <span class="mono">merged</span>. Use when the collision is a genuine additional record.<br>
+          <b>Reject</b> — drops the held rows; production keeps what it had.
+        </span>
       </div>
     </div>
   </div>

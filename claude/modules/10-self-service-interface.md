@@ -75,7 +75,7 @@ staging / production / waiting / quarantine **KPI cards** (`_data_stats.html` +
 ### 10.5a Waiting-Pipeline Review Tool  ✅ backend: `odin/resolve.py`
 - Lists pending `waiting_batch_log` rows — one per `(source, table, existence_value)` with `wbatch_id`, `row_count`, age
 - Opening one shows its rows from `waiting.<tbl>` and production's current rows for that `existence_value` side by side
-- Actions: **Approve** (`approve_waiting` → delete production's rows for that value, insert the waiting rows with `restated = true`) · **Reject** (`reject_waiting` → drop the waiting rows, production unchanged)
+- Actions (buttons next to each other on the list *and* the detail screen): **Approve** (`approve_waiting` — replace: delete production's rows for the key, insert the held rows `restated = true`) · **Merge** (`merge_waiting` — keep both: insert the held rows alongside, `restated = false`, `status = 'merged'`) · **Reject** (`reject_waiting` — drop the held rows, production unchanged). Also `odin waiting approve|merge|reject <wbatch_id>`.
 - Its auth is **separate** from the DE/AE roles — assigned per source
 - Filter by source, table, age; backlog + oldest-pending age shown
 

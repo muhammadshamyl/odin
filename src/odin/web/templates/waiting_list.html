@@ -54,7 +54,7 @@
     <div class="pad">
       <div class="note">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
-        <span><b>Approve</b> deletes production's rows for that existence value, reinserts the held rows with <span class="mono">restated = true</span>, and the prior values stay visible in provenance. <b>Reject</b> drops the held rows untouched. <b>Reject all</b> clears every batch matching the current filter. An identical-value restatement still lands here — a silent "confirm unchanged" is an integrity risk too.</span>
+        <span><b>Approve</b> replaces production's row(s) for that key with the held rows (<span class="mono">restated = true</span>); the prior values stay visible in provenance. <b>Merge</b> keeps both — inserts the held rows alongside the existing ones (<span class="mono">restated = false</span>), for a collision that is a genuine additional record. <b>Reject</b> drops the held rows untouched. <b>Reject all</b> clears every batch matching the current filter.</span>
       </div>
     </div>
   </div>

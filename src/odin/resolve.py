@@ -271,9 +271,20 @@ def quarantine_rows(qbatch_id: str, *, limit: int = 500) -> list[dict]:
 # --------------------------------------------------------------------------- #
 
 def approve_waiting(wbatch_id: str, *, resolved_by: str | None = None) -> dict:
-    """Replace production's rows for this batch's existence value with the
-    waiting rows (restated = TRUE). Serialised against the transform by the
-    per-table lock."""
+    """**Replace** — delete production's rows for this batch's key (existence value
+    or composite `nk`) and reinsert the held rows with ``restated = TRUE``.
+    Serialised against the transform by the per-table lock."""
+    return _admit_waiting(wbatch_id, resolved_by=resolved_by, replace=True)
+
+
+def merge_waiting(wbatch_id: str, *, resolved_by: str | None = None) -> dict:
+    """**Keep both** — insert the held rows into production *alongside* the existing
+    ones (no delete, ``restated = FALSE``). For a key collision that is a genuine
+    additional record, not a restatement."""
+    return _admit_waiting(wbatch_id, resolved_by=resolved_by, replace=False)
+
+
+def _admit_waiting(wbatch_id: str, *, resolved_by: str | None, replace: bool) -> dict:
     with connection() as conn, conn.cursor() as cur:
         cur.execute("SELECT * FROM waiting_batch_log WHERE wbatch_id = %s", (wbatch_id,))
         wb = cur.fetchone()
@@ -287,22 +298,22 @@ def approve_waiting(wbatch_id: str, *, resolved_by: str | None = None) -> dict:
     source_cols = registry.get_columns(src, tbl)
     key_cols = cfg.natural_key_columns
     prod_cols = source_cols + [n for n, _ in PRODUCTION_META] + (["nk"] if key_cols else [])
-    # select off waiting.<w>: every column as-is, but force restated = true
+    # select off waiting.<w>: every column as-is; restated TRUE on replace, FALSE on merge
     select_list = [sql.Identifier(c) for c in source_cols] + [
         sql.Identifier("batch_id"),
         sql.Identifier("load_date"),
         sql.Identifier("load_timestamp"),
         sql.Identifier("source_system"),
-        sql.SQL("true"),
+        sql.SQL("true" if replace else "false"),
     ] + ([sql.Identifier("nk")] if key_cols else [])
     prd = qname(cfg.production_target)
     wt = qname(cfg.waiting_target)
-    if key_cols:
+    if replace and key_cols:
         meta = registry.get_columns_meta(src, tbl)
         tok = {c["column_name"]: c["target_data_type"] for c in meta}
         pg_types = [casts.pg_type(tok[c]) for c in key_cols]
         nk_tie = ddl.natural_key_match("p", "w", key_cols, pg_types)
-    else:
+    elif replace:
         e = sql.Identifier(cfg.existence_check_column)
 
     run_id = runlog.new_run_id()
@@ -326,19 +337,22 @@ def approve_waiting(wbatch_id: str, *, resolved_by: str | None = None) -> dict:
                     ddl.production_partition_ddl(cfg.production_target, r["load_date"].isoformat())
                 )
 
-            if key_cols:
-                cur.execute(
-                    sql.SQL(
-                        "DELETE FROM {prd} p USING {wt} w "
-                        "WHERE w.wbatch_id = %s AND p.nk = w.nk AND {tie}"
-                    ).format(prd=prd, wt=wt, tie=nk_tie),
-                    (wbatch_id,),
-                )
-            else:
-                cur.execute(
-                    sql.SQL("DELETE FROM {} WHERE {}::text = %s").format(prd, e), (value,)
-                )
-            replaced = cur.rowcount
+            replaced = 0
+            if replace:
+                if key_cols:
+                    cur.execute(
+                        sql.SQL(
+                            "DELETE FROM {prd} p USING {wt} w "
+                            "WHERE w.wbatch_id = %s AND p.nk = w.nk AND {tie}"
+                        ).format(prd=prd, wt=wt, tie=nk_tie),
+                        (wbatch_id,),
+                    )
+                else:
+                    cur.execute(
+                        sql.SQL("DELETE FROM {} WHERE {}::text = %s").format(prd, e), (value,)
+                    )
+                replaced = cur.rowcount
+
             cur.execute(
                 sql.SQL(
                     "INSERT INTO {} ({}) SELECT {} FROM {} WHERE wbatch_id = %s"
@@ -355,17 +369,18 @@ def approve_waiting(wbatch_id: str, *, resolved_by: str | None = None) -> dict:
                 sql.SQL("DELETE FROM {} WHERE wbatch_id = %s").format(wt),
                 (wbatch_id,),
             )
+            new_status = "approved" if replace else "merged"
             cur.execute(
                 """UPDATE waiting_batch_log
-                   SET status = 'approved', resolved_by = %s, resolved_at = now()
+                   SET status = %s, resolved_by = %s, resolved_at = now()
                    WHERE wbatch_id = %s""",
-                (resolved_by, wbatch_id),
+                (new_status, resolved_by, wbatch_id),
             )
         runlog.finish(
             log_id, status="success", rows_processed=inserted, rows_to_production=inserted
         )
         return {
-            "wbatch_id": wbatch_id, "status": "approved",
+            "wbatch_id": wbatch_id, "status": new_status,
             "production_rows_replaced": replaced, "production_rows_inserted": inserted,
         }
     except Exception as exc:
