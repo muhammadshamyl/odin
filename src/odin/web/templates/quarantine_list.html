@@ -17,11 +17,11 @@
 <div class="grid g-4" style="margin-bottom:16px">
   <div class="panel kpi">
     <div class="k-top"><span class="mlabel">Open batches</span><span class="sdot {{ 'warn' if st.batches else 'ok' }}"></span></div>
-    <div class="k-val tnum">{{ "{:,}".format(st.batches) }}</div>
+    <div class="k-val tnum"><span title="{{ "{:,}".format(st.batches) }}">{{ st.batches | compact }}</span></div>
   </div>
   <div class="panel kpi">
     <div class="k-top"><span class="mlabel">Rows held</span></div>
-    <div class="k-val tnum">{{ "{:,}".format(st.rows) }}</div>
+    <div class="k-val tnum"><span title="{{ "{:,}".format(st.rows) }}">{{ st.rows | compact }}</span></div>
   </div>
   <div class="panel kpi">
     <div class="k-top"><span class="mlabel">Oldest open</span><span class="sdot {{ 'warn' if st.batches else 'idle' }}"></span></div>
