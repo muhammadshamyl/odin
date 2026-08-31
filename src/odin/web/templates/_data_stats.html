@@ -1,0 +1,12 @@
+{# Self-refreshing staging / production / waiting / quarantine counts for one table.
+   Refreshes on the same `odin:runs-changed` body event the runs panel + lineage use,
+   so the KPI cards update after an extract / transform / load without a page reload. #}
+<div id="data-stats" class="stat-row"
+     hx-get="/partials/stats/{{ cfg.source_id }}/{{ cfg.table_name }}"
+     hx-swap="outerHTML"
+     hx-trigger="odin:runs-changed from:body{% if polling %}, every 4s{% endif %}">
+  <div class="stat"><span class="l">staging rows</span><div class="n tnum">{{ "{:,}".format(staging_count) if staging_count is not none else "—" }}</div></div>
+  <div class="stat"><span class="l">production rows</span><div class="n tnum">{{ "{:,}".format(prod_count) if prod_count is not none else "—" }}</div></div>
+  <div class="stat"><span class="l">waiting</span><div class="n tnum">{{ waiting_count }}</div></div>
+  <div class="stat"><span class="l">quarantine</span><div class="n tnum">{{ quarantine_count }}</div></div>
+</div>

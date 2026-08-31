@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "_macros.html" import quarantine_panel %}
+{% block title %}Quarantine — Odin{% endblock %}
+{% block crumbs %}<b>Quarantine</b>{% endblock %}
+{% block body %}
+{% set st = panel.stats %}
+
+<div class="shead">
+  <div class="no">05</div>
+  <div>
+    <span class="eyebrow">Module 4.3 · 4.6 · 10.5</span>
+    <h1>Quarantine</h1>
+    <p class="sub">Structural failures only — a field that will not cast, a value out of range, a required field empty, a string over the 256-char cap. The whole row is diverted, never partially applied. Fixed rows re-enter as a new batch.</p>
+  </div>
+</div>
+
+<div class="grid g-4" style="margin-bottom:16px">
+  <div class="panel kpi">
+    <div class="k-top"><span class="mlabel">Open batches</span><span class="sdot {{ 'warn' if st.batches else 'ok' }}"></span></div>
+    <div class="k-val tnum">{{ "{:,}".format(st.batches) }}</div>
+  </div>
+  <div class="panel kpi">
+    <div class="k-top"><span class="mlabel">Rows held</span></div>
+    <div class="k-val tnum">{{ "{:,}".format(st.rows) }}</div>
+  </div>
+  <div class="panel kpi">
+    <div class="k-top"><span class="mlabel">Oldest open</span><span class="sdot {{ 'warn' if st.batches else 'idle' }}"></span></div>
+    <div class="k-val tnum" style="font-size:16px">
+      {%- if st.oldest %}<time class="reltime" datetime="{{ st.oldest.isoformat() }}">{{ st.oldest }}</time>{% else %}—{% endif -%}
+    </div>
+  </div>
+  <div class="panel kpi">
+    <div class="k-top"><span class="mlabel">Distinct reasons</span></div>
+    <div class="k-val tnum">{{ st.reasons }}</div>
+  </div>
+</div>
+
+<div class="grid g-2-1">
+  <div class="panel marked">
+    <div class="panel-h"><h3>Open batches</h3><span class="grow"></span><span class="mlabel">quarantine_batch_log</span></div>
+    <div class="pad">
+      <form method="get" class="inline-form" style="margin-bottom:.9rem">
+        <input name="source" value="{{ source }}" placeholder="source">
+        <input name="table" value="{{ table }}" placeholder="table">
+        <button class="btn subtle sm" type="submit">Filter</button>
+        {% if source or table %}<a class="btn ghost sm" href="/quarantine">Clear</a>{% endif %}
+      </form>
+      {{ quarantine_panel(panel) }}
+    </div>
+  </div>
+
+  <div class="panel marked">
+    <div class="panel-h"><h3>Why quarantine</h3></div>
+    <div class="pad">
+      <div class="note warn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>
+        <span>The 256-char cap is not cosmetic: one long, incompressible string in an indexed production column exceeds Postgres's btree entry limit and jams the bulk insert for the whole batch. <b>Re-inject</b> copies rows back to staging under a fresh <span class="mono">batch_id</span>; run the transform to re-process. Still-bad rows re-quarantine. There is no patch-in-place.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

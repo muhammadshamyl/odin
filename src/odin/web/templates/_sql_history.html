@@ -1,0 +1,14 @@
+{% if history %}
+<ol class="sqlc-log">
+  {% for h in history %}
+  <li class="{{ 'err' if h.status == 'error' }}">
+    <span class="ts">{{ h.ts or '' }}</span>
+    <span class="lt {{ h.klass }}">[{{ h.klass|upper }}]</span>
+    <span class="q">{{ h.sql }}</span>
+    <span class="rr">{% if h.status == 'error' %}&#10007; {% endif %}{{ h.detail }}</span>
+  </li>
+  {% endfor %}
+</ol>
+{% else %}
+<div class="empty"><div class="art">∅</div>No statements yet this session.</div>
+{% endif %}

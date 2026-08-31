@@ -1,0 +1,79 @@
+{% macro resultgrid(g) %}
+<div class="sqlc-gridmeta">:: <b>{{ g.row_count }}</b> row(s){% if g.elapsed_ms is not none %} &middot; <b>{{ "%.1f ms"|format(g.elapsed_ms) }}</b>{% endif %}
+  {% if g.truncated %}&middot; <span class="sqlc-trunc">capped &mdash;
+    <button type="button" class="sqlc-mini" hx-post="/sql/run" hx-include="#sql-form"
+      hx-vals='{"full":"1"}' hx-target="#sql-result" hx-swap="innerHTML">load all rows</button></span>{% endif %}
+</div>
+{% if g.columns %}
+<div class="sqlc-gridwrap">
+<table>
+  <thead><tr>{% for c in g.columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for row in g.rows %}<tr>{% for cell in row %}<td>{% if cell == '' %}<span class="nul">&#8709;</span>{% else %}{{ cell }}{% endif %}</td>{% endfor %}</tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% if not g.rows %}<div class="empty"><div class="art">∅</div>ran &middot; 0 rows</div>{% endif %}
+{% endmacro %}
+
+{% set has_result = error or grid or pending or committed or discarded or messages or need_write %}
+{% if not has_result %}
+<div class="sqlc-idle"><span class="tri">&#9654;</span> awaiting query &mdash; <kbd>&#8984;&#8629;</kbd> / <kbd>Ctrl&#8629;</kbd> to run</div>
+{% else %}
+
+<div class="sqlc-rule">:: result</div>
+
+{% if error %}
+<div class="sql-err">
+  <b>{{ "Write mode required" if need_write else "Error" }}</b>
+  <p>{{ error }}</p>
+</div>
+{% endif %}
+
+{% if no_undo and not error %}
+<p class="sql-note">Ran outside a transaction — no undo (admin / session statement).</p>
+{% endif %}
+
+{% if pending %}
+<div class="sql-pending">
+  <div class="sp-head">
+    <span class="flag">&#9888; staged — not committed</span>
+    <span class="sub">{{ pending.count }} statement(s) &middot; ~<b>{{ "{:,}".format(pending.affected) }}</b> row(s) affected</span>
+  </div>
+  {% if pending.messages %}
+  <ul class="sql-msgs">
+    {% for m in pending.messages %}
+    <li><code>{{ m.sql }}</code> &rarr; <b>{{ m.rowcount }}</b> row(s){% if m.klass in ('ddl', 'admin') %} <span class="k">{{ m.klass }}</span>{% endif %}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% if pending.grid %}{{ resultgrid(pending.grid) }}{% endif %}
+  <form class="sp-actions" hx-post="/sql/commit" hx-target="#sql-result" hx-swap="innerHTML">
+    <input type="hidden" name="token" value="{{ pending.token }}">
+    {% if pending.confirm %}
+    <input name="confirm" class="sqlc-by" autocomplete="off"
+      placeholder="type “{{ pending.confirm|join(', ') }}” to confirm the drop">
+    {% endif %}
+    <button type="submit" class="sqlc-commit"><span class="spin"></span>Commit</button>
+    <button type="submit" class="sqlc-ghost" formnovalidate
+      hx-post="/sql/discard" hx-target="#sql-result" hx-swap="innerHTML">Discard</button>
+  </form>
+</div>
+{% endif %}
+
+{% if committed %}<div class="sql-ok"><b>Committed.</b> Changes saved.</div>{% endif %}
+{% if discarded %}<div class="sql-note"><b>Discarded.</b> Nothing changed.</div>{% endif %}
+
+{% if messages and not pending %}
+<ul class="sql-msgs">
+  {% for m in messages %}
+  <li><code>{{ m.sql }}</code> &rarr; <b>{{ m.rowcount }}</b> row(s){% if m.elapsed_ms is not none %} <span class="k">{{ "%.1f ms"|format(m.elapsed_ms) }}</span>{% endif %}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if grid %}{{ resultgrid(grid) }}{% endif %}
+
+<div id="sql-history" hx-swap-oob="true">{% include "_sql_history.html" %}</div>
+{% endif %}

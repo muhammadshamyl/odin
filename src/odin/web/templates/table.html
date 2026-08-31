@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% from "_macros.html" import type_rows, sqlblocks %}
+{% block title %}{{ cfg.source_id }}.{{ cfg.table_name }} — Odin{% endblock %}
+{% block crumbs %}<a href="/">Operations Deck</a> <span style="opacity:.4">/</span> <b>{{ cfg.source_id }} / {{ cfg.table_name }}</b>{% endblock %}
+{% block body %}
+
+<div class="shead">
+  <div class="no">◈</div>
+  <div>
+    <span class="eyebrow">{{ cfg.load_type }} · {{ cfg.load_recurrence }}</span>
+    <h1>{{ cfg.source_id }} / {{ cfg.table_name }}</h1>
+    <p class="sub">One pipeline, isolated per stage. Extraction reads only the source; the transform is the single casting and routing point.</p>
+  </div>
+  <div class="grow"></div>
+  <span class="badge {{ 'ok' if cfg.status == 'ACTIVE' else 'warn' }}"><span class="dot"></span>{{ cfg.status }}</span>
+</div>
+
+<div class="card marked">
+  <div class="card-head"><h2>Lineage</h2><div class="grow"></div><span class="mlabel">{{ cfg.staging_target }} &rarr; {{ cfg.production_target }}</span></div>
+  {% include "_lineage.html" %}
+</div>
+
+<div class="grid cols-2">
+  <div class="card marked">
+    <div class="card-head"><h2>Configuration</h2><div class="grow"></div><span class="mlabel">schema registry</span></div>
+    <dl class="kv">
+      <dt>Load type</dt><dd><b>{{ cfg.load_type }}</b></dd>
+      <dt>Existence column</dt><dd>{{ cfg.existence_check_column or '—' }}</dd>
+      <dt>Natural key</dt><dd>{{ cfg.natural_key or '—' }}</dd>
+      <dt>Recurrence</dt><dd>{{ cfg.load_recurrence }}</dd>
+      <dt>Columns</dt><dd>{{ columns|length }} — {{ columns|join(', ') }}</dd>
+      <dt>staging</dt><dd>{{ cfg.staging_target }}</dd>
+      <dt>production</dt><dd>{{ cfg.production_target }}</dd>
+      <dt>quarantine</dt><dd>{{ cfg.quarantine_target }}</dd>
+      <dt>waiting</dt><dd>{{ cfg.waiting_target }}</dd>
+    </dl>
+  </div>
+
+  <div class="card marked">
+    <div class="card-head"><h2>Data &amp; runs</h2></div>
+    {% include "_data_stats.html" %}
+
+    <label class="field">Load a file &rarr; production</label>
+    <p class="hint" style="margin:-.2rem 0 .6rem">Lands the file in <span class="mono">{{ cfg.staging_target }}</span>, then runs the transform into <span class="mono">{{ cfg.production_target }}</span> and clears staging — one run, both stages.</p>
+    <form class="dropzone" style="text-align:center" data-autosubmit
+          hx-post="/t/{{ cfg.source_id }}/{{ cfg.table_name }}/load"
+          hx-encoding="multipart/form-data"
+          hx-target="#load-slot" hx-swap="innerHTML"
+          hx-on::after-request="if(event.detail.successful) this.reset()">
+      <span data-dropzone-label><strong>Drop a CSV / TXT here</strong> or click to pick</span>
+      <input type="file" name="file" accept=".csv,.txt,text/csv,text/plain" required hidden>
+      <div style="margin-top:.8rem">
+        <button class="btn primary" type="submit"><span class="spin"></span>Load to production</button>
+      </div>
+    </form>
+    <div id="load-slot"></div>
+
+    <details class="substep" style="margin-top:1rem">
+      <summary>Manual steps</summary>
+      <p class="hint" style="margin:.5rem 0 .7rem">To inspect staging on its own, or to re-run the transform after a quarantine re-inject.</p>
+      <form class="dropzone" style="text-align:center"
+            hx-post="/t/{{ cfg.source_id }}/{{ cfg.table_name }}/extract"
+            hx-encoding="multipart/form-data" hx-swap="none"
+            hx-on::after-request="if(event.detail.successful) this.reset()">
+        <span data-dropzone-label>Drop a file to load into <span class="mono">staging</span> only</span>
+        <input type="file" name="file" accept=".csv,.txt,text/csv,text/plain" required hidden>
+        <div style="margin-top:.7rem">
+          <button class="btn sm" type="submit"><span class="spin"></span>Extract only</button>
+        </div>
+      </form>
+      <div class="btn-row" style="margin-top:.7rem">
+        <button class="btn sm"
+                hx-post="/t/{{ cfg.source_id }}/{{ cfg.table_name }}/transform" hx-swap="none"
+                {% if not staging_count %}hx-confirm="Staging is empty — the transform has nothing to move to production. Run it anyway?" data-confirm-label="Run anyway"{% endif %}>
+          <span class="spin"></span>Run transform
+        </button>
+      </div>
+    </details>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card marked">
+    <div class="card-head"><h2>Production column types</h2><div class="grow"></div>
+      <span class="mlabel">registry_columns</span></div>
+    <p class="hint" style="margin-bottom:.8rem">Re-typing rebuilds the production table and moves the data across with the new casts. Every existing value is test-cast first — one that will not convert aborts the change and names the offending values. Blocked while quarantine / waiting batches are open.</p>
+    <form action="/t/{{ cfg.source_id }}/{{ cfg.table_name }}/retype" method="post"
+          onsubmit="return confirm('Rebuild {{ cfg.production_target }} with the selected types and migrate {{ prod_count }} row(s)?')">
+      {{ type_rows(columns, cast_labels, col_types, req_cols) }}
+      <div class="btn-row" style="margin-top:1rem">
+        <button class="btn primary" type="submit">Apply types</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card marked">
+    <div class="card-head"><h2>Generated SQL</h2><div class="grow"></div>
+      <span class="mlabel">read-only · rebuilt from the registry</span></div>
+    <p class="hint" style="margin-bottom:.6rem">Exactly what Odin runs for each stage. To change it, change the column types or load config above — there is no hand-edited SQL path.</p>
+    <div class="sqlstack">{{ sqlblocks(sql_blocks) }}</div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card marked">
+    <div class="card-head"><h2>Waiting batches</h2><div class="grow"></div>
+      <span class="badge info">{{ waiting_count }}</span>
+      <a class="btn sm ghost" href="/waiting?source={{ cfg.source_id }}&table={{ cfg.table_name }}">Open →</a></div>
+    {% if waiting %}
+    <div class="table-wrap"><table class="data">
+      <thead><tr><th>Batch</th><th>Existence value</th><th>Rows</th><th></th></tr></thead>
+      <tbody>{% for w in waiting %}
+      <tr><td class="m" data-label="Batch">{{ w.wbatch_id[:8] }}</td>
+          <td data-label="Existence value"><span class="badge info">{{ w.existence_value }}</span></td>
+          <td class="num" data-label="Rows">{{ "{:,}".format(w.row_count) }}</td>
+          <td data-label=""><a class="btn sm ghost" href="/waiting/{{ w.wbatch_id }}">Review</a></td></tr>
+      {% endfor %}</tbody>
+    </table></div>
+    {% if waiting_count > waiting|length %}<p class="mlabel" style="margin-top:.6rem">+ {{ waiting_count - waiting|length }} more</p>{% endif %}
+    {% else %}<div class="empty"><div class="art">✓</div>None pending.</div>{% endif %}
+  </div>
+
+  <div class="card marked">
+    <div class="card-head"><h2>Quarantine batches</h2><div class="grow"></div>
+      <span class="badge warn">{{ quarantine_count }}</span>
+      <a class="btn sm ghost" href="/quarantine?source={{ cfg.source_id }}&table={{ cfg.table_name }}">Open →</a></div>
+    {% if quarantine %}
+    <div class="table-wrap"><table class="data">
+      <thead><tr><th>Batch</th><th>Reason</th><th>Rows</th><th></th></tr></thead>
+      <tbody>{% for q in quarantine %}
+      <tr><td class="m" data-label="Batch">{{ q.qbatch_id[:8] }}</td>
+          <td data-label="Reason"><span class="badge warn">{{ q.reason }}</span></td>
+          <td class="num" data-label="Rows">{{ "{:,}".format(q.row_count) }}</td>
+          <td data-label=""><a class="btn sm ghost" href="/quarantine/{{ q.qbatch_id }}">Review</a></td></tr>
+      {% endfor %}</tbody>
+    </table></div>
+    {% if quarantine_count > quarantine|length %}<p class="mlabel" style="margin-top:.6rem">+ {{ quarantine_count - quarantine|length }} more</p>{% endif %}
+    {% else %}<div class="empty"><div class="art">✓</div>None open.</div>{% endif %}
+  </div>
+</div>
+
+<div class="card marked">
+  <div class="card-head"><h2>Runs</h2></div>
+  <div hx-get="{{ panel_url }}" hx-trigger="load" hx-swap="outerHTML">
+    <div class="empty">Loading runs…</div>
+  </div>
+</div>
+
+<details class="card marked pipe-danger">
+  <summary><h2>Delete pipeline</h2></summary>
+  <p class="hint" style="margin:.7rem 0 .9rem">
+    Removes this pipeline entirely — the four tables
+    (<span class="mono">{{ cfg.staging_target }}</span>,
+    <span class="mono">{{ cfg.production_target }}</span>,
+    <span class="mono">{{ cfg.quarantine_target }}</span>,
+    <span class="mono">{{ cfg.waiting_target }}</span>),
+    every registry row, and its run history — in one transaction. Blocked while a
+    job is running. You can re-onboard the source afterwards.
+  </p>
+  <pre class="sqlblock mono">{% for s in dereg.statements %}{{ s }}
+{% endfor %}</pre>
+  <form action="/t/{{ cfg.source_id }}/{{ cfg.table_name }}/deregister" method="post"
+        onsubmit="return confirm('Delete the {{ cfg.source_id }}.{{ cfg.table_name }} pipeline? This drops all four tables and its registry + run history. It cannot be undone.')">
+    <div class="btn-row" style="gap:14px; align-items:center; margin-bottom:.8rem">
+      <label class="reqbox"><input type="checkbox" name="physical_only" value="1"> tables only (keep registry rows)</label>
+      <label class="reqbox"><input type="checkbox" name="keep_history" value="1"> keep <span class="mono">run_log</span> history</label>
+    </div>
+    <div class="btn-row" style="gap:10px; align-items:center">
+      <input name="confirm" autocomplete="off"
+             placeholder="type {{ cfg.source_id }}.{{ cfg.table_name }} to confirm"
+             class="dz-name-input">
+      <button class="btn danger" type="submit">Delete pipeline</button>
+    </div>
+  </form>
+</details>
+
+{% endblock %}

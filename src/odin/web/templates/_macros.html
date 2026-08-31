@@ -1,0 +1,239 @@
+{% macro numcell(v) -%}
+  {%- if v is none -%}<span class="num muted">—</span>
+  {%- elif v == 0 -%}<span class="num zero">0</span>
+  {%- else -%}<span class="num pos">{{ "{:,}".format(v) }}</span>{%- endif -%}
+{%- endmacro %}
+
+{% macro status_badge(s) -%}
+  {%- set cls = {'success':'ok','failed':'danger','running':'warn running'}.get(s, '') -%}
+  <span class="badge {{ cls }}"><span class="dot"></span>{{ s }}</span>
+{%- endmacro %}
+
+{# one stage of a run: None = not started for this run #}
+{% macro stage_pill(state) -%}
+  {%- if state is none -%}<span class="pill idle">—</span>
+  {%- elif state == 'success' -%}<span class="pill ok"><span class="dot"></span>complete</span>
+  {%- elif state == 'running' -%}<span class="pill running"><span class="dot"></span>running</span>
+  {%- else -%}<span class="pill failed"><span class="dot"></span>failed</span>{%- endif -%}
+{%- endmacro %}
+
+{% macro age(ts) -%}
+  <time class="reltime" datetime="{{ ts.isoformat() }}">{{ ts }}</time>
+{%- endmacro %}
+
+{# ---- pager for the inline batch panels (htmx GET, swaps the panel) ---- #}
+{% macro _pager(p, endpoint, anchor) %}
+{% if p.pages > 1 %}
+<div class="pager">
+  <span class="mlabel">{{ p.total }} total · page {{ p.page }} / {{ p.pages }}</span>
+  <div class="grow"></div>
+  <button class="btn sm ghost" {{ 'disabled' if p.page <= 1 }}
+    hx-get="{{ endpoint }}?source={{ p.source|urlencode }}&table={{ p.table|urlencode }}&page={{ p.page - 1 }}"
+    hx-target="{{ anchor }}" hx-swap="outerHTML">← prev</button>
+  <button class="btn sm ghost" {{ 'disabled' if p.page >= p.pages }}
+    hx-get="{{ endpoint }}?source={{ p.source|urlencode }}&table={{ p.table|urlencode }}&page={{ p.page + 1 }}"
+    hx-target="{{ anchor }}" hx-swap="outerHTML">next →</button>
+</div>
+{% endif %}
+{% endmacro %}
+
+{# ---- waiting pipeline: inline-action panel (htmx target) ---- #}
+{% macro waiting_panel(p) %}
+<div id="waiting-panel">
+<div class="panelbar">
+  <p class="mlabel">{{ p.total }} pending{% if p.source or p.table %} · filtered{% endif %}</p>
+  <div class="grow"></div>
+  {% if p.total %}
+  <button class="btn sm danger" hx-post="/waiting/reject-all"
+    hx-target="#waiting-panel" hx-swap="outerHTML" hx-disabled-elt="this"
+    hx-vals='{"source": {{ p.source|tojson }}, "table": {{ p.table|tojson }}, "page": 1}'
+    hx-confirm="Reject ALL {{ p.total }} pending batch(es){% if p.source or p.table %} for this filter{% endif %} — drop every held row? Production is unchanged. This cannot be undone."
+    data-confirm-label="Reject all"><span class="spin"></span>Reject all {{ p.total }}</button>
+  {% endif %}
+</div>
+{% if p.entries %}
+<div class="table-wrap">
+<table class="data">
+  <thead><tr><th>Batch</th><th>Source / Table</th><th>Existence value</th>
+    <th>Rows</th><th>Age</th><th></th></tr></thead>
+  <tbody>
+  {% for w in p.entries %}
+  <tr>
+    <td data-label="Batch" class="m">{{ w.wbatch_id[:8] }}</td>
+    <td data-label="Source / Table" class="m">{{ w.source_id }} / <b style="color:var(--text)">{{ w.table_name }}</b></td>
+    <td data-label="Existence value"><span class="badge info">{{ w.existence_value }}</span></td>
+    <td data-label="Rows" class="num">{{ numcell(w.row_count) }}</td>
+    <td data-label="Age" class="m">{{ age(w.created_at) }}</td>
+    <td data-label="" class="btn-row">
+      <a class="btn sm ghost" href="/waiting/{{ w.wbatch_id }}">Review</a>
+      <button class="btn sm ok" hx-post="/waiting/{{ w.wbatch_id }}/approve"
+        hx-target="#waiting-panel" hx-swap="outerHTML" hx-disabled-elt="this"
+        hx-vals='{"source": {{ p.source|tojson }}, "table": {{ p.table|tojson }}, "page": {{ p.page }}}'
+        hx-confirm="Approve {{ w.wbatch_id[:8] }} — replace production's {{ w.row_count }} row(s) for {{ w.existence_value }} and mark them restated?"
+        data-confirm-label="Approve"><span class="spin"></span>Approve</button>
+      <button class="btn sm danger" hx-post="/waiting/{{ w.wbatch_id }}/reject"
+        hx-target="#waiting-panel" hx-swap="outerHTML" hx-disabled-elt="this"
+        hx-vals='{"source": {{ p.source|tojson }}, "table": {{ p.table|tojson }}, "page": {{ p.page }}}'
+        hx-confirm="Reject {{ w.wbatch_id[:8] }} — drop {{ w.row_count }} held row(s)? Production is unchanged."
+        data-confirm-label="Reject"><span class="spin"></span>Reject</button>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{{ _pager(p, '/partials/waiting', '#waiting-panel') }}
+{% else %}
+<div class="empty"><div class="art">✓</div>Nothing pending{% if p.source or p.table %} for this filter{% endif %}.</div>
+{% endif %}
+</div>
+{% endmacro %}
+
+{# ---- quarantine: inline-action panel (htmx target) ---- #}
+{% macro quarantine_panel(p) %}
+<div id="quarantine-panel">
+<div class="panelbar">
+  <p class="mlabel">{{ p.total }} open{% if p.source or p.table %} · filtered{% endif %}</p>
+</div>
+{% if p.entries %}
+<div class="table-wrap">
+<table class="data">
+  <thead><tr><th>Batch</th><th>Source / Table</th><th>Reason</th>
+    <th>Rows</th><th>Age</th><th></th></tr></thead>
+  <tbody>
+  {% for q in p.entries %}
+  <tr>
+    <td data-label="Batch" class="m">{{ q.qbatch_id[:8] }}</td>
+    <td data-label="Source / Table" class="m">{{ q.source_id }} / <b style="color:var(--text)">{{ q.table_name }}</b></td>
+    <td data-label="Reason"><span class="badge warn">{{ q.reason }}</span></td>
+    <td data-label="Rows" class="num">{{ numcell(q.row_count) }}</td>
+    <td data-label="Age" class="m">{{ age(q.created_at) }}</td>
+    <td data-label="" class="btn-row">
+      <a class="btn sm ghost" href="/quarantine/{{ q.qbatch_id }}">Review</a>
+      <button class="btn sm primary" hx-post="/quarantine/{{ q.qbatch_id }}/reinject"
+        hx-target="#quarantine-panel" hx-swap="outerHTML" hx-disabled-elt="this"
+        hx-vals='{"source": {{ p.source|tojson }}, "table": {{ p.table|tojson }}, "page": {{ p.page }}}'
+        hx-confirm="Re-inject {{ q.qbatch_id[:8] }} — copy {{ q.row_count }} row(s) back to staging as a new batch? Run the transform afterwards."
+        data-confirm-label="Re-inject"><span class="spin"></span>Re-inject</button>
+      <button class="btn sm danger" hx-post="/quarantine/{{ q.qbatch_id }}/ignore"
+        hx-target="#quarantine-panel" hx-swap="outerHTML" hx-disabled-elt="this"
+        hx-vals='{"source": {{ p.source|tojson }}, "table": {{ p.table|tojson }}, "page": {{ p.page }}}'
+        hx-confirm="Ignore {{ q.qbatch_id[:8] }} — drop {{ q.row_count }} row(s)? This cannot be undone."
+        data-confirm-label="Ignore"><span class="spin"></span>Ignore</button>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{{ _pager(p, '/partials/quarantine', '#quarantine-panel') }}
+{% else %}
+<div class="empty"><div class="art">✓</div>Nothing open{% if p.source or p.table %} for this filter{% endif %}.</div>
+{% endif %}
+</div>
+{% endmacro %}
+
+{# ---- production column types: name / cast token / required ---- #}
+{% macro type_rows(cols, cast_labels, current={}, req_current=[]) %}
+<div class="typegrid">
+  {% for c in cols %}
+  <div class="typerow2">
+    <span class="mono tname">{{ c }}</span>
+    <select name="type_{{ c }}">
+      {% for tok, label in cast_labels.items() %}
+      <option value="{{ tok }}" {{ 'selected' if current.get(c, 'text') == tok }}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <label class="reqbox"><input type="checkbox" name="req_{{ c }}" value="1" {{ 'checked' if c in req_current }}> required</label>
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{# ---- computed held-vs-production comparison (waiting review) ---- #}
+{% macro compare_grid(compare) %}
+<div class="diff">
+  <div class="side">
+    <div class="s-h">Production now</div>
+    {% for m in compare.metrics %}
+    <div class="drow{{ ' chg' if m.changed }}"><span>{{ m.label }}</span>
+      <span>{{ "{:,}".format(m.production) if m.production is not none else "—" }}</span></div>
+    {% endfor %}
+  </div>
+  <div class="side">
+    <div class="s-h incoming">Incoming (held)</div>
+    {% for m in compare.metrics %}
+    <div class="drow{{ ' chg' if m.changed }}"><span>{{ m.label }}</span>
+      <span>{{ "{:,}".format(m.incoming) if m.incoming is not none else "—" }}</span></div>
+    {% endfor %}
+  </div>
+</div>
+{% if not compare.numeric_cols %}
+<p class="mlabel" style="margin-top:.6rem">No numeric production columns — set column types to get a value-level diff.</p>
+{% endif %}
+{% endmacro %}
+
+{# ---- read-only generated SQL, one <pre> + copy per stage ---- #}
+{% macro sqlblocks(blocks) %}
+{% for b in blocks %}
+<div class="sqlwrap">
+  <div class="sqlhead"><span class="mlabel">{{ b.title }}</span><div class="grow"></div>
+    <button type="button" class="btn sm ghost copybtn" onclick="Odin.copy(this)">copy</button></div>
+  <pre class="sqlblock mono">{{ b.sql }}</pre>
+</div>
+{% endfor %}
+{% endmacro %}
+
+{% macro rows_table(rows, cols) %}
+{% if rows %}
+<div class="table-wrap">
+<table class="data">
+  <thead><tr>{% for c in cols %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for r in rows %}
+  <tr>{% for c in cols %}<td data-label="{{ c }}" class="m">{{ r.get(c, '') }}</td>{% endfor %}</tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}<div class="empty"><div class="art">∅</div>none</div>{% endif %}
+{% endmacro %}
+
+{# One row per run_id. Extract's per-100k-row batches + the transform collapse
+   into a single row; each stage shows its own state. #}
+{% macro runs_table(runs) %}
+{% if runs %}
+<div class="table-wrap">
+<table class="data">
+  <thead><tr>
+    <th>Run</th><th>Source / Table</th><th>Extract</th><th>Transform</th>
+    <th>→ Staging</th><th>→ Prod</th><th>→ Wait</th><th>Qtn</th>
+    <th>By</th><th>Started</th><th>Dur</th><th>Error</th>
+  </tr></thead>
+  <tbody>
+  {% for r in runs %}
+  <tr class="{{ 'is-running' if r.status == 'running' }}{{ ' fail-row' if r.status == 'failed' }}">
+    <td data-label="Run" class="m">
+      {{ r.run_id[:8] if r.run_id else '—' }}
+      {%- if r.extract_batches and r.extract_batches > 1 %} <span class="mlabel">{{ r.extract_batches }}&times;100k</span>{% endif %}
+    </td>
+    <td data-label="Source / Table" class="m">{{ r.source_id }} / <b style="color:var(--text)">{{ r.table_name }}</b></td>
+    <td data-label="Extract">{{ stage_pill(r.extract_state) }}</td>
+    <td data-label="Transform">{{ stage_pill(r.transform_state) }}</td>
+    <td data-label="→ Staging" class="num">{{ numcell(r.rows_processed) }}</td>
+    <td data-label="→ Prod" class="num">{{ numcell(r.rows_to_production) }}</td>
+    <td data-label="→ Wait" class="num">{{ numcell(r.rows_to_waiting) }}</td>
+    <td data-label="Qtn" class="num">{{ numcell(r.rows_quarantined) }}</td>
+    <td data-label="By"><span class="badge">{{ r.triggered_by or '—' }}</span></td>
+    <td data-label="Started" class="m">
+      {% if r.started_at %}<time class="reltime" datetime="{{ r.started_at.isoformat() }}">{{ r.started_at }}</time>{% endif %}
+    </td>
+    <td data-label="Dur" class="num">{{ ('%.2fs' % r.duration_s) if r.duration_s is not none else '—' }}</td>
+    <td data-label="Error" class="m" style="color:var(--danger)">{{ r.error_message or '' }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}<div class="empty"><div class="art">✳</div>No runs yet.</div>{% endif %}
+{% endmacro %}

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Odin{% endblock %}</title>
+<script>
+  /* apply the saved theme before first paint — no flash of the dark default */
+  try { var t = localStorage.getItem("odin-theme"); if (t) document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/htmx.min.js" defer></script>
+<script src="/static/app.js" defer></script>
+</head>
+<body>
+{% set p = request.url.path %}
+<div class="shell">
+  <aside class="rail">
+    <a class="brand" href="/">
+      <span class="glyph">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3.4"/><path d="M12 2v3.2M12 18.8V22M2 12h3.2M18.8 12H22M4.9 4.9l2.3 2.3M16.8 16.8l2.3 2.3M19.1 4.9l-2.3 2.3M7.2 16.8l-2.3 2.3"/></svg>
+      </span>
+      <span class="wm">ODIN<span>·1</span></span>
+    </a>
+
+    {% macro navlink(href, label, active) -%}
+      <a class="nav-link {{ 'active' if active }}" href="{{ href }}">
+        <span class="ico">{{ caller() }}</span><span class="label">{{ label }}</span>
+      </a>
+    {%- endmacro %}
+
+    <div class="sect mlabel">Console</div>
+    {% call navlink('/', 'Operations Deck', p == '/') %}
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 13h8V3H3zM13 21h8V3h-8zM3 21h8v-6H3z"/></svg>
+    {% endcall %}
+    {% call navlink('/onboard', 'Onboard Source', p.startswith('/onboard')) %}
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg>
+    {% endcall %}
+    {% call navlink('/runs', 'Pipeline Monitor', p.startswith('/runs')) %}
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+    {% endcall %}
+    {% call navlink('/sql', 'SQL Console', p.startswith('/sql')) %}
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 17l6-6-6-6M12 19h8"/></svg>
+    {% endcall %}
+
+    <div class="sect mlabel">Diversions</div>
+    {% call navlink('/waiting', 'Waiting Pipeline', p.startswith('/waiting')) %}
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+    {% endcall %}
+    {% call navlink('/quarantine', 'Quarantine', p.startswith('/quarantine')) %}
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l8 4v5c0 5-3.2 8-8 9-4.8-1-8-4-8-9V7z"/><path d="M9.5 12h5"/></svg>
+    {% endcall %}
+
+    <div class="spacer"></div>
+    <div class="foot">
+      <div class="row"><span>Env</span><span style="color:var(--ok)">Prod</span></div>
+      <div class="row"><span>Build</span><span>slice-1</span></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="cmdbar">
+      <div class="crumbs">ODIN <span style="opacity:.4">/</span> {% block crumbs %}<b>Operations Deck</b>{% endblock %}</div>
+      <div class="grow"></div>
+      {% block topbar_actions %}{% endblock %}
+      <span class="chip env"><span class="sdot ok"></span> PROD</span>
+      <span class="live"><i></i> LIVE</span>
+      <span class="clock" id="odin-clock">00:00:00 UTC</span>
+      <button class="iconbtn" type="button" onclick="Odin.toggleTheme()" title="Toggle theme" aria-label="Toggle theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
+      </button>
+    </div>
+    <main class="wrap stage">
+      {% block body %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<div id="modal-root"></div>
+
+<script>
+  // bridge the legacy ?msg=... flash into a toast, then clean the URL
+  (function () {
+    var q = new URLSearchParams(location.search);
+    var m = q.get("msg");
+    if (m) {
+      var fire = function () {
+        Odin.toast(m, /error/i.test(m) ? "err" : "ok");
+        q.delete("msg");
+        history.replaceState({}, "", location.pathname + (q.toString() ? "?" + q : ""));
+      };
+      window.Odin ? fire() : addEventListener("DOMContentLoaded", fire);
+    }
+  })();
+</script>
+</body>
+</html>

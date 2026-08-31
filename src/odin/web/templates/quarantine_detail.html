@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% from "_macros.html" import rows_table %}
+{% block title %}Quarantine {{ qb.qbatch_id[:8] }}{% endblock %}
+{% block crumbs %}<a href="/quarantine">Quarantine</a> <span style="opacity:.4">/</span> <b>{{ qb.qbatch_id[:8] }}</b>{% endblock %}
+{% block body %}
+
+<div class="shead">
+  <div class="no">05</div>
+  <div>
+    <span class="eyebrow">Batch {{ qb.qbatch_id[:8] }}</span>
+    <h1>{{ qb.source_id }} / {{ qb.table_name }}</h1>
+    <p class="sub">The whole row was diverted, never partially applied. Fix the source and re-inject as a new batch — there is no patch-in-place.</p>
+  </div>
+  <div class="grow"></div>
+  <span class="pill {{ 'warn' if qb.resolution_status == 'open' else 'idle' }}"><span class="dot"></span>{{ qb.resolution_status }}</span>
+</div>
+
+<div class="grid g-2-1">
+  <div class="panel marked">
+    <div class="panel-h"><h3>Batch — {{ qb.qbatch_id[:8] }}</h3></div>
+    <div class="pad">
+      <dl class="kv" style="margin-bottom:12px">
+        <dt>Source / table</dt><dd><b>{{ qb.source_id }} / {{ qb.table_name }}</b></dd>
+        <dt>Reason</dt><dd><b style="color:var(--warn)">{{ qb.reason }}</b></dd>
+        <dt>Rows</dt><dd>{{ "{:,}".format(qb.row_count) }}</dd>
+        {% if qb.run_id %}<dt>Raised by run</dt><dd class="mono">{{ qb.run_id[:8] }}</dd>{% endif %}
+        <dt>Opened</dt><dd><time class="reltime" datetime="{{ qb.created_at.isoformat() }}">{{ qb.created_at }}</time></dd>
+        {% if qb.resolved_by %}<dt>Resolved by</dt><dd>{{ qb.resolved_by }}</dd>{% endif %}
+      </dl>
+
+      {% if qb.resolution_status == 'open' %}
+      <div class="btn-row" style="margin-top:1rem">
+        <form class="inline" action="/quarantine/{{ qb.qbatch_id }}/reinject" method="post">
+          <input name="by" placeholder="your name" style="max-width:11rem; display:inline-block; margin-right:.5rem">
+          <button class="btn primary" type="submit">Re-inject — new batch → staging</button>
+        </form>
+        <form class="inline" action="/quarantine/{{ qb.qbatch_id }}/ignore" method="post">
+          <button class="btn danger" type="submit">Ignore — drop</button>
+        </form>
+      </div>
+      <p class="hint" style="margin-top:.7rem">Re-inject copies these rows back to staging under a fresh <span class="mono">batch_id</span>; run the transform to re-process. Still-bad rows will re-quarantine under a new batch.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="panel marked">
+    <div class="panel-h"><h3>Why quarantine</h3></div>
+    <div class="pad">
+      <div class="note warn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>
+        <span>Structural failure only — a cast that would not succeed, a value out of range, a required field empty, or a string past the 256-char btree cap. Never a business-content judgment.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel marked" style="margin-top:16px">
+  <div class="panel-h"><h3>Held rows — verbatim VARCHAR from staging</h3><span class="grow"></span>
+    <span class="mlabel">{{ rows|length }} shown</span></div>
+  <div class="pad">{{ rows_table(rows, cols) }}</div>
+</div>
+
+<p style="margin-top:1rem"><a href="/quarantine">← back to open</a></p>
+{% endblock %}

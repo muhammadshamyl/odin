@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Runs — Odin{% endblock %}
+{% block crumbs %}<b>Pipeline Monitor</b>{% endblock %}
+{% block body %}
+
+<div class="shead">
+  <div class="no">03</div>
+  <div>
+    <span class="eyebrow">Module 8 · 9 · 10.3</span>
+    <h1>Pipeline Monitor</h1>
+    <p class="sub">The run log at <span class="mono">(run_id, batch_id)</span> grain, written on a side connection so a rolled-back transform still records exactly how far it got.</p>
+  </div>
+</div>
+
+<div class="card marked">
+  <div class="card-head"><h2>Pipeline anatomy</h2><div class="grow"></div><span class="mlabel">one pipeline per source per stage</span></div>
+  <svg class="lineage" viewBox="0 0 960 210" role="img" aria-label="Source to Staging to Production to Business, with Quarantine and Waiting diversions off the transform">
+    <path class="flow" d="M150 60 H214"/><path class="flow" d="M338 60 H402"/>
+    <path class="flow" d="M526 60 H590"/><path class="flow" d="M714 60 H778"/>
+    <g><rect class="node" x="20" y="38" width="130" height="44" rx="4"/><text class="nlabel" x="85" y="58" text-anchor="middle">Source</text><text class="nsub" x="85" y="72" text-anchor="middle">CSV / TXT file</text></g>
+    <g><rect class="proc" x="214" y="42" width="124" height="36" rx="4"/><text class="nlabel" x="276" y="64" text-anchor="middle">extract</text></g>
+    <g><rect class="node" x="402" y="38" width="124" height="44" rx="4"/><text class="nlabel" x="464" y="58" text-anchor="middle">Staging</text><text class="nsub" x="464" y="72" text-anchor="middle">VARCHAR buffer</text></g>
+    <g><rect class="proc" x="590" y="42" width="124" height="36" rx="4"/><text class="nlabel" x="652" y="64" text-anchor="middle">transform</text></g>
+    <g><rect class="node prod" x="778" y="38" width="124" height="44" rx="4"/><text class="nlabel" x="840" y="58" text-anchor="middle" style="fill:var(--accent)">Production</text><text class="nsub" x="840" y="72" text-anchor="middle">typed · partitioned</text></g>
+    <path class="div" style="stroke:var(--text-faint)" d="M840 82 V128"/>
+    <g><rect class="node" x="778" y="128" width="124" height="40" rx="4"/><text class="nlabel" x="840" y="152" text-anchor="middle">Business</text></g>
+    <path class="div q" d="M652 78 V120 H470 V150"/>
+    <path class="div w" d="M652 78 V134 H636 V150"/>
+    <g><rect class="qbox" x="392" y="150" width="156" height="40" rx="4"/><text class="nlabel" x="470" y="167" text-anchor="middle" style="fill:var(--warn)">Quarantine</text><text class="nsub" x="470" y="181" text-anchor="middle">structurally bad</text></g>
+    <g><rect class="wbox" x="558" y="150" width="156" height="40" rx="4"/><text class="nlabel" x="636" y="167" text-anchor="middle" style="fill:var(--info)">Waiting</text><text class="nsub" x="636" y="181" text-anchor="middle">human decision</text></g>
+  </svg>
+</div>
+
+<div class="card marked">
+  <div class="card-head"><h2>Run log</h2><div class="grow"></div></div>
+  <form method="get" class="inline-form" style="margin-bottom:.9rem">
+    <input name="source" value="{{ source }}" placeholder="source">
+    <input name="table" value="{{ table }}" placeholder="table">
+    <button class="btn subtle sm" type="submit">Filter</button>
+    {% if source or table %}<a class="btn ghost sm" href="/runs">Clear</a>{% endif %}
+  </form>
+  <div hx-get="{{ panel_url }}" hx-trigger="load" hx-swap="outerHTML">
+    <div class="empty">Loading runs…</div>
+  </div>
+</div>
+{% endblock %}

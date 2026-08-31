@@ -1,0 +1,24 @@
+{% from "_macros.html" import runs_table %}
+<div id="runs-panel" data-runs-panel
+     hx-get="{{ poll_url }}" hx-swap="outerHTML"
+     hx-trigger="odin:runs-changed from:body{% if polling %}, every 3s{% endif %}">
+  {% if failed_jobs is defined and failed_jobs %}
+  <div class="jobs-strip">
+    {% for j in failed_jobs %}
+      <span class="badge danger" title="failed {{ j.ended_at }}">
+        <span class="dot"></span>{{ j.kind }} · {{ j.source_id }}.{{ j.table_name }} failed — {{ j.error or 'see server log' }}
+      </span>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if jobs %}
+  <div class="jobs-strip">
+    {% for j in jobs %}
+      <span class="badge {{ 'running' if j.state == 'running' else '' }}" title="submitted {{ j.submitted_at }}">
+        <span class="dot"></span>{{ j.kind }} · {{ j.source_id }}.{{ j.table_name }} · {{ j.state }}
+      </span>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {{ runs_table(runs) }}
+</div>

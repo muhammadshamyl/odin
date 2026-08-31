@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% from "_macros.html" import type_rows %}
+{% block title %}Onboard — preview{% endblock %}
+{% block crumbs %}<a href="/">Operations Deck</a> <span style="opacity:.4">/</span> <a href="/onboard">Onboard Source</a> <span style="opacity:.4">/</span> <b>Preview</b>{% endblock %}
+{% block body %}
+
+<div class="shead">
+  <div class="no">02</div>
+  <div>
+    <span class="eyebrow">Step 2 of 4 · pick load type &amp; column types</span>
+    <h1>Preview &amp; configure</h1>
+    <p class="sub">The sample lands in staging only — nothing reaches production until you create the pipeline. Types you set here become the production table's real column types; a value that will not cast is quarantined at transform.</p>
+  </div>
+</div>
+
+<div class="stepper">
+  <div class="step done"><span class="n">✓</span>Upload</div>
+  <div class="step active"><span class="n">2</span>Preview &amp; types</div>
+  <div class="step"><span class="n">3</span>Create</div>
+  <div class="step"><span class="n">4</span>First run</div>
+</div>
+
+{% if error %}<div class="flash err" style="margin-top:16px">{{ error }}</div>{% endif %}
+
+<form action="/onboard/create" method="post">
+<input type="hidden" name="f" value="{{ f }}">
+
+<div class="grid g-2-1" style="margin-top:16px">
+  <div class="card marked">
+    <div class="card-head">
+      <h2>Sample</h2><div class="grow"></div>
+      <span class="mlabel">{{ fmt }} · {{ header|length }} cols · {{ rows|length }} rows · preview only</span>
+    </div>
+    <div class="table-wrap capped">
+    <table class="data">
+      <thead><tr>{% for h in header %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+      <tbody>
+      {% for row in rows %}
+      <tr>{% for h in header %}<td class="m" data-label="{{ h }}">{{ row.get(h, '') }}</td>{% endfor %}</tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+
+    <div class="pad">
+      <span class="mlabel">Production column types</span>
+      <p class="sub" style="margin:.3rem 0 .6rem">Default <b class="mono">text</b>. Everything stays text in staging; these apply on the staging&nbsp;→&nbsp;production transform.</p>
+      {{ type_rows(header, cast_labels) }}
+    </div>
+  </div>
+
+  <div class="card marked">
+    <div class="card-head"><h2>Configure</h2></div>
+
+    <label class="field">Source name</label>
+    <input name="name" required placeholder="ERP Sales">
+
+    <label class="field">Table name</label>
+    <input name="table" required placeholder="sales">
+
+    <label class="field">Load type</label>
+    <select name="load_type" id="load_type"
+            onchange="document.getElementById('inc-only').style.display = this.value === 'INCREMENTAL' ? 'block' : 'none'">
+      <option value="INCREMENTAL">INCREMENTAL — divert rows already in production to waiting</option>
+      <option value="FULL_SNAPSHOT">FULL_SNAPSHOT — overwrite this load_date wholesale</option>
+    </select>
+
+    <div id="inc-only">
+      <label class="field">Existence-check column <span class="sub" style="text-transform:none">— single date column</span></label>
+      <select name="existence_column">
+        <option value="">— choose a date column —</option>
+        {% for h in header %}<option value="{{ h }}">{{ h }}</option>{% endfor %}
+      </select>
+
+      <label class="field" style="margin-top:.9rem">Natural key <span class="sub" style="text-transform:none">— composite; overrides the date column when set</span></label>
+      <p class="sub" style="margin:.2rem 0 .5rem">The columns that together identify one row. Pick two (a third is optional). Collisions on this key route to the waiting pipeline. Not for numeric columns.</p>
+      <div class="nk-picks">
+        {% for i in range(3) %}
+        <select name="nk_col" class="nk-pick" aria-label="Natural key column {{ i + 1 }}">
+          <option value="">— key column {{ i + 1 }}{{ ' (optional)' if i > 1 }} —</option>
+          {% for h in header %}<option value="{{ h }}" data-col="{{ h }}">{{ h }}   ·   text</option>{% endfor %}
+        </select>
+        {% endfor %}
+      </div>
+      <div id="nk-key-preview" class="nk-key-preview"></div>
+    </div>
+
+    <label class="field">Recurrence</label>
+    <select name="recurrence">
+      <option value="ONE_TIME">ONE_TIME</option>
+      <option value="RECURRING">RECURRING</option>
+    </select>
+
+    <label class="field">Owner (optional)</label>
+    <input name="owner">
+
+    <label class="nolabel" style="display:flex; align-items:center; gap:.5rem; margin:1rem 0 0; font-size:12px; color:var(--text-soft); text-transform:none; letter-spacing:0; font-family:var(--font)">
+      <input type="checkbox" name="run_now" value="1"> extract &amp; transform this uploaded file now
+    </label>
+
+    <div class="btn-row" style="margin-top:1.2rem">
+      <button class="btn primary" type="submit">Create pipeline</button>
+      <a class="btn ghost" href="/onboard">Start over</a>
+    </div>
+  </div>
+</div>
+</form>
+
+<script>
+(function () {
+  var picks = Array.prototype.slice.call(document.querySelectorAll("select.nk-pick"));
+  var preview = document.getElementById("nk-key-preview");
+  if (!picks.length) return;
+
+  function esc(s) { return s.replace(/[&<>]/g, function (m) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m]; }); }
+  function tokFor(name) {
+    var s = document.querySelector('[name="type_' + (window.CSS && CSS.escape ? CSS.escape(name) : name) + '"]');
+    return s ? s.value : "text";
+  }
+  // faded type hint in every option, synced to the "Production column types" selects
+  function syncTypeHints() {
+    document.querySelectorAll("select.nk-pick option[data-col]").forEach(function (o) {
+      o.textContent = o.dataset.col + "   ·   " + tokFor(o.dataset.col);
+    });
+  }
+  // grey out a column in the *other* dropdowns once it is chosen, and show the
+  // resulting composite key
+  function refresh() {
+    var chosen = picks.map(function (p) { return p.value; });
+    picks.forEach(function (p, i) {
+      p.classList.toggle("filled", !!p.value);
+      Array.prototype.forEach.call(p.options, function (o) {
+        if (!o.value) return;
+        var takenElsewhere = chosen.some(function (v, j) { return j !== i && v === o.value; });
+        o.disabled = takenElsewhere && o.value !== p.value;
+      });
+    });
+    var cols = chosen.filter(Boolean);
+    preview.innerHTML = cols.length
+      ? cols.map(function (c) { return '<span class="k">' + esc(c) + "</span>"; }).join('<span class="sep">›</span>')
+      : '<span class="empty">no key set — falls back to the existence-check column</span>';
+  }
+
+  document.querySelectorAll('[name^="type_"]').forEach(function (s) { s.addEventListener("change", syncTypeHints); });
+  picks.forEach(function (p) { p.addEventListener("change", refresh); });
+  syncTypeHints();
+  refresh();
+})();
+</script>
+
+{% endblock %}

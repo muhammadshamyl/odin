@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}SQL Console — Odin{% endblock %}
+{% block crumbs %}<b>SQL Console</b>{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="/static/vendor/codemirror/codemirror.min.css">
+<link rel="stylesheet" href="/static/vendor/codemirror/show-hint.min.css">
+
+<div class="sqlc" id="sqlc-frame">
+
+  <!-- ============ CONSOLE COLUMN ============ -->
+  <div class="sqlc-main">
+
+    <div class="pagehead">
+      <span class="eyebrow">Console</span>
+      <h1>SQL Console</h1>
+      <p class="lede">Ad-hoc SQL against the Odin database. Read-only until you turn on
+        Write mode; writes and DDL run inside a transaction you Commit or Discard.
+        Every statement is capped at {{ "{:,}".format(row_cap) }}&nbsp;rows and
+        {{ timeout }}&nbsp;s, and logged to <code>sql_console_log</code>.</p>
+    </div>
+
+    <div class="sqlc-cmd">
+      <span class="prompt">odin://sql</span>
+      <span class="grow"></span>
+      <span class="bit"><span class="sdot"></span> ready</span>
+      <span class="bit"><b>{{ db_label }}</b></span>
+      <span class="bit">public</span>
+      <span class="mode-pill" id="sqlc-mode">Read-only</span>
+    </div>
+
+    <section class="panel sqlc-editor-card">
+      <div class="ed-head">
+        <span class="p">odin://sql <b>$</b></span>
+        <span class="wtag">&#9673; WRITE MODE — statements will change data</span>
+        <span class="grow"></span>
+        <span class="tab">untitled.sql</span>
+      </div>
+
+      <form id="sql-form" hx-post="/sql/run" hx-target="#sql-result" hx-swap="innerHTML">
+        <div id="sql-editor" class="sqlc-editor">
+          <textarea name="sql"></textarea>
+        </div>
+        <div class="sqlc-toolbar" id="sqlc-toolbar">
+          <button id="sql-run-btn" type="submit" class="sqlc-run">
+            <span class="tri">&#9654;</span><span class="lbl">Run</span> <kbd>&#8984;&#8629;</kbd></button>
+          <label class="sqlc-switch" id="sqlc-switch" data-on="0"
+            title="Off: only SELECT runs. On: writes &amp; DDL run inside a transaction you Commit or Discard.">
+            <span class="led"></span><span id="sqlc-wlabel">Read-only</span>
+            <input type="checkbox" name="write_mode" value="1">
+          </label>
+          <input class="sqlc-by" name="by" placeholder="operator@team — for the audit log" autocomplete="off">
+          <span class="grow"></span>
+          <div class="sqlc-snip">
+            <button type="button" class="sqlc-snipbtn"
+              onclick="this.nextElementSibling.hidden=!this.nextElementSibling.hidden">Snippets &#9662;</button>
+            <div class="sqlc-snipmenu" hidden>
+              {% for s in snippets %}
+              <button type="button" data-sql-snippet="{{ s.sql }}"
+                onclick="this.closest('.sqlc-snipmenu').hidden=true">{{ s.label }}</button>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <div id="sql-result">{% include "_sql_result.html" %}</div>
+    </section>
+
+    <section class="panel sqlc-scrollback">
+      <div class="panel-h"><span class="u">History</span><span class="grow"></span>
+        <span class="u dim">this session</span></div>
+      <div id="sql-history">{% include "_sql_history.html" %}</div>
+    </section>
+
+    <details class="panel sqlc-danger">
+      <summary>Danger zone — deregister &amp; drop a source</summary>
+      <div class="dz-body">
+        <p>Onboarding a source builds four tables plus registry rows. A hand-written
+          <code>DROP TABLE</code> orphans the rest and blocks re-onboarding. This
+          removes all of it, in one transaction.</p>
+        <form id="dereg-form" hx-post="/sql/deregister" hx-target="#dereg-result" hx-swap="innerHTML"
+              hx-confirm="Remove this source completely? The four tables and its registry rows are dropped in one transaction."
+              data-confirm-label="Deregister">
+          <div class="dz-controls">
+            <select id="dereg-pick" aria-label="registered table"
+              hx-get="/partials/sql/deregister" hx-target="#dereg-preview" hx-swap="innerHTML"
+              hx-trigger="change" hx-include="#dereg-form">
+              <option value="">— pick a registered table —</option>
+              {% for src in tree.sources %}
+              <option value="{{ src.source_id }}::{{ src.table_name }}">{{ src.source_id }} / {{ src.table_name }} · {{ src.load_type }}</option>
+              {% endfor %}
+            </select>
+            <input type="hidden" name="source_id" id="dereg-sid">
+            <input type="hidden" name="table_name" id="dereg-tname">
+            <label class="dz-opt"><input type="checkbox" name="physical_only" value="1"
+              hx-get="/partials/sql/deregister" hx-target="#dereg-preview" hx-swap="innerHTML"
+              hx-include="#dereg-form"> physical tables only</label>
+            <label class="dz-opt"><input type="checkbox" name="keep_history" value="1"
+              hx-get="/partials/sql/deregister" hx-target="#dereg-preview" hx-swap="innerHTML"
+              hx-include="#dereg-form"> keep <code>run_log</code> history</label>
+          </div>
+          <div id="dereg-preview"></div>
+          <div class="dz-confirm">
+            <input name="confirm" placeholder="type source.table to confirm" autocomplete="off">
+            <button type="submit" class="sqlc-drop"><span class="spin"></span>Deregister</button>
+          </div>
+        </form>
+        <div id="dereg-result"></div>
+      </div>
+    </details>
+  </div>
+
+  <!-- ============ SCHEMA COLUMN (right; mirrors the platform nav) ============ -->
+  <div class="sqlc-schema">
+    <button class="schema-handle" id="schema-handle" aria-label="Toggle schema browser" aria-expanded="false">
+      <span class="hinner">
+        <span class="chev">&#10216;</span>
+        <span class="lbl">Schema</span>
+        <span class="ct">{{ schema_table_count }}</span>
+      </span>
+    </button>
+    <aside class="schema-drawer" id="schema-drawer">
+      <div class="schema-scroll">
+        <div class="panel-h"><span class="u">Schema</span><span class="grow"></span>
+          <button type="button" class="u dim schema-refresh" title="Refresh"
+            hx-get="/partials/sql/schema" hx-target="#sql-schema" hx-swap="innerHTML">&#8635;</button>
+          <span class="u dim">&#8984;B</span></div>
+        <div id="sql-schema" hx-get="/partials/sql/schema" hx-trigger="load" hx-swap="innerHTML">
+          <div class="empty">Loading…</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script id="sql-hint-data" type="application/json">{{ hint_tables|safe }}</script>
+<script src="/static/vendor/codemirror/codemirror.min.js"></script>
+<script src="/static/vendor/codemirror/sql.min.js"></script>
+<script src="/static/vendor/codemirror/show-hint.min.js"></script>
+<script src="/static/vendor/codemirror/sql-hint.min.js"></script>
+<script src="/static/vendor/codemirror/matchbrackets.min.js"></script>
+<script src="/static/vendor/codemirror/placeholder.min.js"></script>
+<script src="/static/sqlconsole.js" defer></script>
+{% endblock %}

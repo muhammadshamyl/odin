@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% from "_macros.html" import rows_table, compare_grid %}
+{% block title %}Waiting {{ wb.wbatch_id[:8] }}{% endblock %}
+{% block crumbs %}<a href="/waiting">Waiting Pipeline</a> <span style="opacity:.4">/</span> <b>{{ wb.wbatch_id[:8] }}</b>{% endblock %}
+{% block body %}
+
+<div class="shead">
+  <div class="no">04</div>
+  <div>
+    <span class="eyebrow">Batch {{ wb.wbatch_id[:8] }}</span>
+    <h1>{{ wb.source_id }} / {{ wb.table_name }}</h1>
+    <p class="sub">Held rows whose <span class="mono">{{ wb.existence_value }}</span> already exists in production. The comparison below is computed — counts always, plus sum / min / max for every numeric-typed column. No column is hand-picked.</p>
+  </div>
+  <div class="grow"></div>
+  <span class="pill {{ 'info' if wb.status == 'pending' else ('ok' if wb.status == 'approved' else 'danger') }}"><span class="dot"></span>{{ wb.status }}</span>
+</div>
+
+<div class="grid g-2-1">
+  <div class="panel marked">
+    <div class="panel-h"><h3>Batch — {{ wb.wbatch_id[:8] }}</h3></div>
+    <div class="pad">
+      <dl class="kv" style="margin-bottom:14px">
+        <dt>Source / table</dt><dd><b>{{ wb.source_id }} / {{ wb.table_name }}</b></dd>
+        <dt>Existence value</dt><dd><b style="color:var(--info)">{{ wb.existence_value }}</b></dd>
+        <dt>Rows in batch</dt><dd>{{ "{:,}".format(wb.row_count) }}</dd>
+        {% if wb.run_id %}<dt>Raised by run</dt><dd class="mono">{{ wb.run_id[:8] }}</dd>{% endif %}
+        <dt>Age</dt><dd><time class="reltime" datetime="{{ wb.created_at.isoformat() }}">{{ wb.created_at }}</time></dd>
+        {% if wb.resolved_by %}<dt>Resolved by</dt><dd>{{ wb.resolved_by }}</dd>{% endif %}
+      </dl>
+
+      <span class="mlabel">Held rows vs current production — {{ wb.existence_value }}</span>
+      <div style="margin-top:8px">{{ compare_grid(compare) }}</div>
+
+      {% if wb.status == 'pending' %}
+      <div class="btn-row" style="margin-top:16px">
+        <form class="inline" action="/waiting/{{ wb.wbatch_id }}/approve" method="post">
+          <input name="by" placeholder="your name" style="max-width:11rem; display:inline-block; margin-right:.5rem">
+          <button class="btn ok" type="submit">Approve — replace &amp; restate</button>
+        </form>
+        <form class="inline" action="/waiting/{{ wb.wbatch_id }}/reject" method="post">
+          <button class="btn danger" type="submit">Reject — drop batch</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="panel marked">
+    <div class="panel-h"><h3>What approve does</h3></div>
+    <div class="pad">
+      <div class="note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+        <span>Deletes production's rows for <span class="mono">{{ wb.existence_value }}</span>, reinserts these held rows with <span class="mono">restated = true</span>, and marks the batch approved. <b>Reject</b> drops the held rows; production keeps what it had.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel marked" style="margin-top:16px">
+  <div class="panel-h"><h3>Row-level — held vs current production</h3><span class="grow"></span>
+    <span class="mlabel">all columns · no aggregation</span></div>
+  <div class="pad">
+    <div class="cols">
+      <div>
+        <span class="mlabel">Incoming — held ({{ w_rows|length }})</span>
+        {{ rows_table(w_rows, cols) }}
+      </div>
+      <div>
+        <span class="mlabel">Currently in production ({{ p_rows|length }})</span>
+        {{ rows_table(p_rows, cols) }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:1rem"><a href="/waiting">← back to pending</a></p>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "_macros.html" import waiting_panel %}
+{% block title %}Waiting — Odin{% endblock %}
+{% block crumbs %}<b>Waiting Pipeline</b>{% endblock %}
+{% block body %}
+{% set st = panel.stats %}
+
+<div class="shead">
+  <div class="no">04</div>
+  <div>
+    <span class="eyebrow">Module 4.7 · 10.5a · separate auth</span>
+    <h1>Waiting Pipeline</h1>
+    <p class="sub">Structurally valid rows whose existence value already sits in production. Applying them rewrites settled history — a content decision, so a human makes it. An identical-value restatement still lands here.</p>
+  </div>
+</div>
+
+<div class="grid g-4" style="margin-bottom:16px">
+  <div class="panel kpi">
+    <div class="k-top"><span class="mlabel">Pending batches</span><span class="sdot {{ 'info' if st.batches else 'ok' }}"></span></div>
+    <div class="k-val tnum">{{ "{:,}".format(st.batches) }}</div>
+  </div>
+  <div class="panel kpi">
+    <div class="k-top"><span class="mlabel">Rows held</span></div>
+    <div class="k-val tnum">{{ "{:,}".format(st.rows) }}</div>
+  </div>
+  <div class="panel kpi">
+    <div class="k-top"><span class="mlabel">Oldest pending</span><span class="sdot {{ 'warn' if st.batches else 'idle' }}"></span></div>
+    <div class="k-val tnum" style="font-size:16px">
+      {%- if st.oldest %}<time class="reltime" datetime="{{ st.oldest.isoformat() }}">{{ st.oldest }}</time>{% else %}—{% endif -%}
+    </div>
+  </div>
+  <div class="panel kpi">
+    <div class="k-top"><span class="mlabel">Sources affected</span></div>
+    <div class="k-val tnum">{{ st.sources }}</div>
+  </div>
+</div>
+
+<div class="grid g-2-1">
+  <div class="panel marked">
+    <div class="panel-h"><h3>Pending batches</h3><span class="grow"></span><span class="mlabel">waiting_batch_log</span></div>
+    <div class="pad">
+      <form method="get" class="inline-form" style="margin-bottom:.9rem">
+        <input name="source" value="{{ source }}" placeholder="source">
+        <input name="table" value="{{ table }}" placeholder="table">
+        <button class="btn subtle sm" type="submit">Filter</button>
+        {% if source or table %}<a class="btn ghost sm" href="/waiting">Clear</a>{% endif %}
+      </form>
+      {{ waiting_panel(panel) }}
+    </div>
+  </div>
+
+  <div class="panel marked">
+    <div class="panel-h"><h3>How approval works</h3></div>
+    <div class="pad">
+      <div class="note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+        <span><b>Approve</b> deletes production's rows for that existence value, reinserts the held rows with <span class="mono">restated = true</span>, and the prior values stay visible in provenance. <b>Reject</b> drops the held rows untouched. <b>Reject all</b> clears every batch matching the current filter. An identical-value restatement still lands here — a silent "confirm unchanged" is an integrity risk too.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,15 @@
+{% set c = plan.counts %}
+<div class="dz-plan">
+  {% if busy %}
+  <p class="sql-err">A job is running for <b>{{ source_id }}.{{ table_name }}</b> right now —
+    deregistering is blocked until it finishes.</p>
+  {% endif %}
+  <p class="lbl">:: runs in one transaction</p>
+  <pre class="dz-teardown">{% for s in plan.statements %}{{ s }}
+{% endfor %}</pre>
+  <p class="lbl">:: current contents —
+    staging {{ "{:,}".format(c.staging) if c.staging is not none else "gone" }} &middot;
+    production {{ "{:,}".format(c.production) if c.production is not none else "gone" }} &middot;
+    quarantine {{ "{:,}".format(c.quarantine) if c.quarantine is not none else "gone" }} &middot;
+    waiting {{ "{:,}".format(c.waiting) if c.waiting is not none else "gone" }}</p>
+</div>

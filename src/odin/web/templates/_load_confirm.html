@@ -1,0 +1,18 @@
+<div class="load-confirm card marked">
+  <p class="lc-warn">&#9888; <b>{{ "{:,}".format(staging_count) }}</b> row(s) are already in
+    <span class="mono">{{ cfg.staging_target }}</span> from an earlier load that never reached production.</p>
+  <p class="hint" style="margin:.4rem 0 .8rem">
+    <b>Flush &amp; load</b> transforms those rows into <span class="mono">{{ cfg.production_target }}</span>
+    and clears staging, then loads <span class="mono">{{ filename }}</span> the same way — two runs, back to back.
+  </p>
+  <div class="btn-row">
+    <button class="btn primary"
+            hx-post="/t/{{ cfg.source_id }}/{{ cfg.table_name }}/load"
+            hx-vals='{"saved": "{{ saved }}", "flush": "1"}'
+            hx-target="#load-slot" hx-swap="innerHTML">
+      <span class="spin"></span>Flush &amp; load
+    </button>
+    <button class="btn ghost" type="button"
+            onclick="this.closest('#load-slot').innerHTML = ''">Cancel</button>
+  </div>
+</div>

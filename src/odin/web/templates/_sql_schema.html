@@ -1,0 +1,29 @@
+{% if tree.sources %}
+<div class="sqlc-tree">
+  {% for src in tree.sources %}
+  <div class="src">
+    <div class="hd"><span class="name">{{ src.source_id }} / {{ src.table_name }}</span>
+      <span class="lt">{{ src.load_type|lower }}</span></div>
+    {% for t in src.tables %}
+    <button class="row" type="button" data-sql-insert="{{ t.name }}" title="insert {{ t.name }}">
+      <span class="tag {{ t.kind[0] }}">{{ t.kind[0]|upper }}</span>
+      <span class="nm">{{ t.name }}</span>
+      <span class="ct">{{ "{:,}".format(t.count) if t.count is not none else "—" }}</span>
+    </button>
+    {% endfor %}
+  </div>
+  {% endfor %}
+  <div class="src">
+    <div class="hd"><span class="name">platform</span><span class="lt">control plane</span></div>
+    {% for p in tree.platform %}
+    <button class="row" type="button" data-sql-insert="{{ p.name }}" title="insert {{ p.name }}">
+      <span class="tag p">·</span>
+      <span class="nm">{{ p.name }}</span>
+      <span class="ct">{{ "{:,}".format(p.count) if p.count is not none else "—" }}</span>
+    </button>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+<div class="empty"><div class="art">∅</div>No sources registered.</div>
+{% endif %}

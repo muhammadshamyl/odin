@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+staging_files/
+web_uploads/
+.env
+*.egg-info/
+dist/
+
+# local tooling / per-user state
+.claude/settings.local.json
+.impeccable/

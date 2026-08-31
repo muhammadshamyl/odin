@@ -1,0 +1,60 @@
+{# Self-refreshing pipeline lineage for one table.
+   `state`   : per-node 'running' | 'done' | 'failed' | None (from app._pipeline_stage_state)
+   `polling` : truthy while a job for this table is queued/running -> add the interval tick
+   Refreshes on the same `odin:runs-changed` body event the runs panel listens for. #}
+<div id="lineage-panel"
+     hx-get="/partials/lineage/{{ cfg.source_id }}/{{ cfg.table_name }}"
+     hx-swap="outerHTML"
+     hx-trigger="odin:runs-changed from:body{% if polling %}, every 4s{% endif %}">
+  <svg class="lineage" viewBox="0 0 960 210" role="img"
+       aria-label="Pipeline lineage, current stage highlighted">
+    <path class="flow{% if state.extract == 'running' %} live{% endif %}" d="M150 60 H214"/>
+    <path class="flow{% if state.staging == 'running' %} live{% endif %}" d="M338 60 H402"/>
+    <path class="flow{% if state.transform == 'running' %} live{% endif %}" d="M526 60 H590"/>
+    <path class="flow{% if state.production == 'running' %} live{% endif %}" d="M714 60 H778"/>
+
+    <g class="lg s-{{ state.source or 'idle' }}">
+      <rect class="node" x="20" y="38" width="130" height="44" rx="4"/>
+      <text class="nlabel" x="85" y="58" text-anchor="middle">Source</text>
+      <text class="nsub" x="85" y="72" text-anchor="middle">{{ cfg.source_type|default('file') }}</text>
+    </g>
+    <g class="lg s-{{ state.extract or 'idle' }}">
+      <rect class="proc" x="214" y="42" width="124" height="36" rx="4"/>
+      <text class="nlabel" x="276" y="64" text-anchor="middle">extract</text>
+    </g>
+    <g class="lg s-{{ state.staging or 'idle' }}">
+      <rect class="node" x="402" y="38" width="124" height="44" rx="4"/>
+      <text class="nlabel" x="464" y="58" text-anchor="middle">Staging</text>
+      <text class="nsub" x="464" y="72" text-anchor="middle">{{ "{:,} rows".format(staging_count) if staging_count is not none else "VARCHAR buffer" }}</text>
+    </g>
+    <g class="lg s-{{ state.transform or 'idle' }}">
+      <rect class="proc" x="590" y="42" width="124" height="36" rx="4"/>
+      <text class="nlabel" x="652" y="64" text-anchor="middle">transform</text>
+    </g>
+    <g class="lg s-{{ state.production or 'idle' }}">
+      <rect class="node prod" x="778" y="38" width="124" height="44" rx="4"/>
+      <text class="nlabel" x="840" y="58" text-anchor="middle" style="fill:var(--accent)">Production</text>
+      <text class="nsub" x="840" y="72" text-anchor="middle">{{ "{:,} rows".format(prod_count) if prod_count is not none else "partition · load_date" }}</text>
+    </g>
+
+    <path class="div" style="stroke:var(--text-faint)" d="M840 82 V128"/>
+    <g><rect class="node" x="778" y="128" width="124" height="40" rx="4"/>
+      <text class="nlabel" x="840" y="152" text-anchor="middle">Business</text></g>
+
+    <path class="div q" d="M652 78 V120 H470 V150"/>
+    <path class="div w" d="M652 78 V134 H636 V150"/>
+    <g><rect class="qbox" x="392" y="150" width="156" height="40" rx="4"/>
+      <text class="nlabel" x="470" y="167" text-anchor="middle" style="fill:var(--warn)">Quarantine</text>
+      <text class="nsub" x="470" y="181" text-anchor="middle">{{ quarantine|length }} open</text></g>
+    <g><rect class="wbox" x="558" y="150" width="156" height="40" rx="4"/>
+      <text class="nlabel" x="636" y="167" text-anchor="middle" style="fill:var(--info)">Waiting</text>
+      <text class="nsub" x="636" y="181" text-anchor="middle">{{ waiting|length }} pending</text></g>
+  </svg>
+
+  <div class="lineage-legend mlabel">
+    <span class="lg-key s-running">running</span>
+    <span class="lg-key s-done">complete</span>
+    <span class="lg-key s-failed">failed</span>
+    {% if polling %}<span class="lg-key s-live">· live</span>{% endif %}
+  </div>
+</div>

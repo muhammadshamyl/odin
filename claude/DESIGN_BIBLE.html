@@ -1,0 +1,1148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- ODIN FRONTEND DESIGN BIBLE
+     Authoritative reference for the Foundry-style console UI.
+     Snapshot of artifact f2bc7909-74e6-48ff-b8a6-489524e4eb36 (Odin Pipeline Console).
+     Open in a browser: 6 screens + a Design System page. Keys 1-6 switch screens;
+     the top-right button toggles light/dark. Tokens live in the :root block below;
+     they are the same names used by src/odin/web/static/app.css. -->
+<title>Odin Pipeline Console — Frontend Design Bible</title>
+<meta name="description" content="A Palantir-Foundry-grade design system and screen gallery for Odin, the self-maintaining data-pipeline console.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+</head>
+<body>
+<style>
+/* ============================================================ TOKENS === */
+:root{
+  /* dark — the default world (system-dark and the un-stamped document) */
+  --void:#090d14; --panel:#0f1722; --panel-2:#0b121b; --raise:#16212f;
+  --line:#1f2e3e; --line-soft:#17232f;
+  --grid:rgba(108,150,192,.045);
+  --ink:#e8eff7; --ink-dim:#93a6ba; --ink-faint:#586d82;
+  --signal:#46c7f0; --signal-deep:#1c94c4; --signal-ink:#04121a; --signal-glow:rgba(70,199,240,.28);
+  --ok:#3fd08b; --warn:#f2b445; --crit:#ff6f6b; --info:#6aa8ff;
+  --shadow:0 22px 60px -18px rgba(0,0,0,.72);
+  --r:4px; --r-lg:6px;
+  --rail-w:216px;
+  --f-display:'Chakra Petch',-apple-system,BlinkMacSystemFont,sans-serif;
+  --f-sans:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --ease:cubic-bezier(.2,.7,.2,1);
+}
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]){
+    --void:#e9edf2; --panel:#ffffff; --panel-2:#f2f5f9; --raise:#ffffff;
+    --line:#d5dde6; --line-soft:#e3e9ef;
+    --grid:rgba(24,64,104,.055);
+    --ink:#101d2c; --ink-dim:#465a6e; --ink-faint:#7d8da0;
+    --signal:#0c81ac; --signal-deep:#0a6a8e; --signal-ink:#ffffff; --signal-glow:rgba(12,129,172,.22);
+    --ok:#0e9c62; --warn:#a96f19; --crit:#d0433f; --info:#2c66d6;
+    --shadow:0 20px 46px -20px rgba(20,45,80,.26);
+  }
+}
+:root[data-theme="light"]{
+  --void:#e9edf2; --panel:#ffffff; --panel-2:#f2f5f9; --raise:#ffffff;
+  --line:#d5dde6; --line-soft:#e3e9ef;
+  --grid:rgba(24,64,104,.055);
+  --ink:#101d2c; --ink-dim:#465a6e; --ink-faint:#7d8da0;
+  --signal:#0c81ac; --signal-deep:#0a6a8e; --signal-ink:#ffffff; --signal-glow:rgba(12,129,172,.22);
+  --ok:#0e9c62; --warn:#a96f19; --crit:#d0433f; --info:#2c66d6;
+  --shadow:0 20px 46px -20px rgba(20,45,80,.26);
+}
+:root[data-theme="dark"]{
+  --void:#090d14; --panel:#0f1722; --panel-2:#0b121b; --raise:#16212f;
+  --line:#1f2e3e; --line-soft:#17232f;
+  --grid:rgba(108,150,192,.045);
+  --ink:#e8eff7; --ink-dim:#93a6ba; --ink-faint:#586d82;
+  --signal:#46c7f0; --signal-deep:#1c94c4; --signal-ink:#04121a; --signal-glow:rgba(70,199,240,.28);
+  --ok:#3fd08b; --warn:#f2b445; --crit:#ff6f6b; --info:#6aa8ff;
+  --shadow:0 22px 60px -18px rgba(0,0,0,.72);
+}
+
+/* ============================================================ BASE ===== */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--void); color:var(--ink);
+  font:13px/1.62 var(--f-sans);
+  -webkit-font-smoothing:antialiased;
+  background-image:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:38px 38px;
+}
+body::before{ /* vignette + top signal wash */
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(1200px 500px at 78% -8%, var(--signal-glow), transparent 60%),
+    radial-gradient(900px 700px at 12% 120%, rgba(106,168,255,.10), transparent 55%);
+  opacity:.7;
+}
+::selection{background:var(--signal); color:var(--signal-ink)}
+a{color:var(--signal); text-decoration:none}
+h1,h2,h3,h4{margin:0; font-weight:600; text-wrap:balance; letter-spacing:-.01em}
+p{margin:0}
+:focus-visible{outline:2px solid var(--signal); outline-offset:2px; border-radius:2px}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* utility label */
+.eyebrow{
+  font:600 10.5px/1 var(--f-mono); letter-spacing:.22em; text-transform:uppercase;
+  color:var(--signal); display:inline-flex; align-items:center; gap:.5em;
+}
+.eyebrow::before{content:""; width:16px; height:1px; background:currentColor; opacity:.7}
+.mlabel{
+  font:500 10px/1.3 var(--f-mono); letter-spacing:.16em; text-transform:uppercase;
+  color:var(--ink-faint);
+}
+.mono{font-family:var(--f-mono)}
+
+/* ============================================================ SHELL ==== */
+.shell{position:relative; z-index:1; display:grid; grid-template-columns:var(--rail-w) 1fr; min-height:100vh}
+
+/* -- rail -- */
+.rail{
+  border-right:1px solid var(--line); background:linear-gradient(180deg,var(--panel),var(--panel-2));
+  padding:18px 12px; position:sticky; top:0; height:100vh;
+  display:flex; flex-direction:column; gap:3px;
+}
+.brand{display:flex; align-items:center; gap:10px; padding:6px 8px 18px}
+.brand .glyph{
+  width:26px; height:26px; flex:none; border:1px solid var(--signal); border-radius:3px;
+  display:grid; place-items:center; color:var(--signal);
+  box-shadow:0 0 0 3px var(--signal-glow), inset 0 0 12px var(--signal-glow);
+}
+.brand .wm{font:700 15px/1 var(--f-display); letter-spacing:.34em; padding-left:.34em}
+.brand .wm span{color:var(--ink-faint)}
+.rail .sect{padding:14px 8px 6px}
+.navlink{
+  display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:var(--r);
+  color:var(--ink-dim); font:500 12.5px/1 var(--f-sans); letter-spacing:.01em;
+  border:1px solid transparent; cursor:pointer; background:none; width:100%; text-align:left;
+  transition:background .14s var(--ease),color .14s var(--ease),border-color .14s var(--ease);
+}
+.navlink svg{width:16px; height:16px; flex:none; opacity:.85}
+.navlink:hover{background:var(--raise); color:var(--ink)}
+.navlink.active{
+  background:color-mix(in srgb,var(--signal) 12%,transparent);
+  border-color:color-mix(in srgb,var(--signal) 38%,transparent);
+  color:var(--ink);
+}
+.navlink.active svg{opacity:1; color:var(--signal)}
+.navlink .kbd{margin-left:auto; font:500 10px/1 var(--f-mono); color:var(--ink-faint)}
+.rail .spacer{flex:1}
+.rail .foot{padding:10px 9px; border-top:1px solid var(--line-soft); color:var(--ink-faint)}
+.rail .foot .row{display:flex; justify-content:space-between; font:500 10px/1.7 var(--f-mono); letter-spacing:.08em; text-transform:uppercase}
+
+/* -- command bar -- */
+.main{min-width:0; display:flex; flex-direction:column}
+.cmdbar{
+  position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:16px;
+  padding:12px 22px; border-bottom:1px solid var(--line);
+  background:color-mix(in srgb,var(--panel) 86%,transparent);
+  backdrop-filter:saturate(1.3) blur(9px);
+}
+.crumbs{font:500 12px/1 var(--f-mono); letter-spacing:.08em; color:var(--ink-faint); text-transform:uppercase}
+.crumbs b{color:var(--ink); font-weight:600}
+.cmdbar .grow{flex:1}
+.chip{
+  display:inline-flex; align-items:center; gap:7px; padding:5px 10px; border-radius:999px;
+  border:1px solid var(--line); background:var(--panel-2);
+  font:500 10.5px/1 var(--f-mono); letter-spacing:.14em; text-transform:uppercase; color:var(--ink-dim);
+}
+.chip.env{border-color:color-mix(in srgb,var(--ok) 40%,transparent); color:var(--ok)}
+.live{display:inline-flex; align-items:center; gap:7px; font:600 10.5px/1 var(--f-mono); letter-spacing:.16em; color:var(--ink-dim); text-transform:uppercase}
+.live i{width:7px; height:7px; border-radius:50%; background:var(--ok); box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 24%,transparent); animation:beat 1.7s var(--ease) infinite}
+.clock{font:500 11.5px/1 var(--f-mono); letter-spacing:.1em; color:var(--ink-dim)}
+.iconbtn{
+  width:30px; height:30px; display:grid; place-items:center; border-radius:var(--r);
+  border:1px solid var(--line); background:var(--panel-2); color:var(--ink-dim); cursor:pointer;
+  transition:color .14s var(--ease),border-color .14s var(--ease);
+}
+.iconbtn:hover{color:var(--ink); border-color:var(--signal)}
+.iconbtn svg{width:15px; height:15px}
+
+/* -- stage -- */
+.stage{padding:26px 22px 60px; max-width:1220px; width:100%}
+.screen{animation:swap .22s var(--ease)}
+.screen[hidden]{display:none}
+@keyframes swap{from{opacity:0; transform:translateY(8px)}}
+
+/* screen header */
+.shead{display:flex; align-items:flex-end; gap:18px; margin-bottom:20px; flex-wrap:wrap}
+.shead .no{font:700 30px/1 var(--f-display); color:var(--line); letter-spacing:.04em}
+.shead h1{font:700 23px/1.1 var(--f-display); letter-spacing:.01em}
+.shead .sub{color:var(--ink-dim); max-width:60ch; margin-top:6px}
+.shead .grow{flex:1}
+
+/* ============================================================ PANEL ==== */
+.panel{
+  background:linear-gradient(180deg,var(--panel),var(--panel-2));
+  border:1px solid var(--line); border-radius:var(--r-lg);
+  position:relative;
+}
+.panel.pad{padding:16px 18px}
+.panel-h{
+  display:flex; align-items:center; gap:12px; padding:12px 16px;
+  border-bottom:1px solid var(--line-soft);
+}
+.panel-h h3{font:600 13px/1 var(--f-sans); letter-spacing:.02em}
+.panel-h .grow{flex:1}
+.marked::before,.marked::after{
+  content:""; position:absolute; width:9px; height:9px; border:1px solid var(--signal); opacity:.5;
+}
+.marked::before{top:-1px; left:-1px; border-right:0; border-bottom:0}
+.marked::after{bottom:-1px; right:-1px; border-left:0; border-top:0}
+
+.grid{display:grid; gap:16px}
+.g-3{grid-template-columns:repeat(3,1fr)}
+.g-4{grid-template-columns:repeat(4,1fr)}
+.g-2-1{grid-template-columns:2fr 1fr}
+.g-1-1{grid-template-columns:1fr 1fr}
+@media(max-width:1080px){ .g-4{grid-template-columns:repeat(2,1fr)} .g-3{grid-template-columns:1fr} .g-2-1,.g-1-1{grid-template-columns:1fr} }
+
+/* ============================================================ KPI ====== */
+.kpi{padding:14px 15px; display:flex; flex-direction:column; gap:8px; overflow:hidden}
+.kpi .k-top{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.kpi .k-val{font:600 27px/1 var(--f-display); letter-spacing:.01em}
+.kpi .k-val small{font:500 12px/1 var(--f-mono); color:var(--ink-faint); letter-spacing:.04em}
+.kpi .k-delta{font:500 10.5px/1 var(--f-mono); letter-spacing:.06em}
+.k-delta.up{color:var(--ok)} .k-delta.down{color:var(--crit)} .k-delta.flat{color:var(--ink-faint)}
+.spark{display:block; width:100%; height:34px}
+
+/* ============================================================ DOT/PILL = */
+.dot{width:7px; height:7px; border-radius:50%; background:var(--c,var(--ink-faint)); display:inline-block;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--c,var(--ink-faint)) 20%,transparent),
+             0 0 9px color-mix(in srgb,var(--c,var(--ink-faint)) 45%,transparent)}
+.dot.ok{--c:var(--ok)} .dot.warn{--c:var(--warn)} .dot.crit{--c:var(--crit)} .dot.info{--c:var(--info)} .dot.idle{--c:var(--ink-faint)}
+.dot.run{--c:var(--signal); animation:beat 1.3s var(--ease) infinite}
+
+.pill{
+  display:inline-flex; align-items:center; gap:6px; padding:3px 9px 3px 7px; border-radius:999px;
+  font:600 10px/1.4 var(--f-mono); letter-spacing:.11em; text-transform:uppercase; white-space:nowrap;
+  background:color-mix(in srgb,var(--c,var(--ink-faint)) 13%,transparent);
+  color:var(--c,var(--ink-dim));
+  border:1px solid color-mix(in srgb,var(--c,var(--ink-faint)) 32%,transparent);
+}
+.pill.ok{--c:var(--ok)} .pill.warn{--c:var(--warn)} .pill.crit{--c:var(--crit)} .pill.info{--c:var(--info)}
+.pill.run{--c:var(--signal)} .pill.idle{--c:var(--ink-faint)}
+.pill .dot{box-shadow:none}
+
+/* ============================================================ TABLE ==== */
+.tw{overflow-x:auto}
+table.data{border-collapse:collapse; width:100%; font-size:12px}
+table.data th{
+  text-align:left; padding:9px 12px; background:var(--panel-2); color:var(--ink-faint);
+  font:600 9.5px/1 var(--f-mono); letter-spacing:.13em; text-transform:uppercase;
+  border-bottom:1px solid var(--line); position:sticky; top:0; white-space:nowrap;
+}
+table.data td{padding:10px 12px; border-bottom:1px solid var(--line-soft); vertical-align:middle}
+table.data tbody tr{transition:background .12s var(--ease)}
+table.data tbody tr:hover{background:color-mix(in srgb,var(--signal) 6%,transparent)}
+table.data td.m{font-family:var(--f-mono); color:var(--ink-dim); font-size:11.5px}
+table.data td.num{font-family:var(--f-mono); font-variant-numeric:tabular-nums; text-align:right}
+.num0{color:var(--ink-faint)}
+.numh{color:var(--ok); font-weight:600}
+tr.run-row{background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--signal) 14%,transparent),transparent); background-size:220% 100%; animation:sweep 1.8s linear infinite}
+tr.fail-row td:first-child{box-shadow:inset 3px 0 0 var(--crit)}
+tr.detail td{background:var(--panel-2); padding:0}
+.detail-body{padding:14px 16px; display:grid; gap:10px; font-family:var(--f-mono); font-size:11.5px; color:var(--ink-dim)}
+.detail-body .err{color:var(--crit)}
+.rowtick{display:inline-block; width:0; height:0}
+
+/* ============================================================ BTN ====== */
+.btn{
+  display:inline-flex; align-items:center; gap:7px; cursor:pointer;
+  font:600 10.5px/1 var(--f-mono); letter-spacing:.12em; text-transform:uppercase;
+  padding:8px 14px; border-radius:var(--r); border:1px solid var(--line);
+  background:var(--panel-2); color:var(--ink); white-space:nowrap;
+  transition:border-color .14s var(--ease),background .14s var(--ease),transform .05s var(--ease);
+}
+.btn:hover{border-color:var(--signal)}
+.btn:active{transform:translateY(1px)}
+.btn svg{width:13px; height:13px}
+.btn.primary{background:color-mix(in srgb,var(--signal) 16%,transparent); border-color:color-mix(in srgb,var(--signal) 46%,transparent); color:var(--ink)}
+.btn.primary:hover{background:color-mix(in srgb,var(--signal) 24%,transparent)}
+.btn.ok{border-color:color-mix(in srgb,var(--ok) 46%,transparent); color:var(--ok)}
+.btn.ok:hover{background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.btn.danger{border-color:color-mix(in srgb,var(--crit) 46%,transparent); color:var(--crit)}
+.btn.danger:hover{background:color-mix(in srgb,var(--crit) 14%,transparent)}
+.btnrow{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+
+/* ============================================================ MISC ===== */
+.kv{display:grid; grid-template-columns:max-content 1fr; gap:7px 18px; font-size:12px}
+.kv dt{font:500 10px/1.6 var(--f-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint)}
+.kv dd{margin:0; font-family:var(--f-mono); font-size:11.5px; color:var(--ink-dim)}
+.kv dd b{color:var(--ink); font-weight:600}
+
+.note{
+  display:flex; gap:10px; padding:11px 13px; border-radius:var(--r);
+  border:1px solid color-mix(in srgb,var(--info) 30%,transparent);
+  background:color-mix(in srgb,var(--info) 9%,transparent); color:var(--ink-dim); font-size:12px;
+}
+.note.warn{border-color:color-mix(in srgb,var(--warn) 32%,transparent); background:color-mix(in srgb,var(--warn) 9%,transparent)}
+.note svg{width:15px; height:15px; flex:none; margin-top:1px; color:var(--info)}
+.note.warn svg{color:var(--warn)}
+
+.alert{display:flex; gap:11px; padding:11px 13px; border-bottom:1px solid var(--line-soft)}
+.alert:last-child{border-bottom:0}
+.alert .bar{width:2px; flex:none; border-radius:2px; background:var(--c,var(--ink-faint))}
+.alert.crit{--c:var(--crit)} .alert.warn{--c:var(--warn)} .alert.info{--c:var(--info)}
+.alert .a-body{flex:1; min-width:0}
+.alert .a-t{font-size:12px; color:var(--ink)}
+.alert .a-m{font:500 10px/1.5 var(--f-mono); letter-spacing:.06em; color:var(--ink-faint); text-transform:uppercase; margin-top:3px}
+
+/* stepper */
+.stepper{display:flex; gap:0; flex-wrap:wrap; margin-bottom:4px}
+.step{
+  display:flex; align-items:center; gap:9px; padding:10px 16px 10px 13px;
+  border:1px solid var(--line); border-right:0; background:var(--panel-2); cursor:pointer;
+  font:600 10px/1 var(--f-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint);
+  transition:color .14s var(--ease),background .14s var(--ease);
+}
+.step:first-child{border-radius:var(--r) 0 0 var(--r)}
+.step:last-child{border-right:1px solid var(--line); border-radius:0 var(--r) var(--r) 0}
+.step .n{width:18px; height:18px; flex:none; display:grid; place-items:center; border-radius:50%; border:1px solid currentColor; font-size:9px}
+.step:hover{color:var(--ink-dim)}
+.step.done{color:var(--ok)}
+.step.active{color:var(--ink); background:color-mix(in srgb,var(--signal) 12%,transparent); border-color:color-mix(in srgb,var(--signal) 40%,transparent)}
+.step.active .n{background:var(--signal); color:var(--signal-ink); border-color:var(--signal)}
+
+/* radio cards */
+.opts{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:12px 0}
+@media(max-width:720px){ .opts{grid-template-columns:1fr} }
+.opt{
+  padding:13px 15px; border:1px solid var(--line); border-radius:var(--r); cursor:pointer;
+  transition:border-color .14s var(--ease),background .14s var(--ease);
+}
+.opt:hover{border-color:var(--ink-faint)}
+.opt.sel{border-color:var(--signal); background:color-mix(in srgb,var(--signal) 8%,transparent)}
+.opt .o-h{display:flex; align-items:center; gap:8px; font:600 11px/1 var(--f-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--ink)}
+.opt .o-r{width:13px; height:13px; border-radius:50%; border:1px solid var(--ink-faint); flex:none; display:grid; place-items:center}
+.opt.sel .o-r{border-color:var(--signal)}
+.opt.sel .o-r::after{content:""; width:6px; height:6px; border-radius:50%; background:var(--signal)}
+.opt p{margin-top:7px; color:var(--ink-dim); font-size:11.5px}
+
+.selectish{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:9px 12px; border:1px solid var(--line); border-radius:var(--r);
+  background:var(--panel-2); font-family:var(--f-mono); font-size:11.5px; color:var(--ink-dim);
+}
+.selectish b{color:var(--signal); font-weight:600}
+.selectish svg{width:13px; height:13px; opacity:.6}
+
+/* lineage */
+.lineage{width:100%; height:auto; display:block}
+.lineage text{font-family:var(--f-mono); fill:var(--ink-dim)}
+.lineage .nlabel{font-size:10px; letter-spacing:.12em; text-transform:uppercase}
+.lineage .nsub{font-size:8px; fill:var(--ink-faint); letter-spacing:.08em}
+.lineage rect.node{fill:var(--panel-2); stroke:var(--line)}
+.lineage rect.proc{fill:var(--raise); stroke:var(--line); stroke-dasharray:3 3}
+.lineage rect.prod{stroke:var(--signal)}
+.lineage .flow{stroke:var(--signal); stroke-width:1.5; fill:none; stroke-dasharray:5 6; animation:dash 1s linear infinite}
+.lineage .div{stroke-width:1.4; fill:none; stroke-dasharray:3 4}
+.lineage .div.q{stroke:var(--warn)} .lineage .div.w{stroke:var(--info)}
+.lineage rect.qbox{fill:color-mix(in srgb,var(--warn) 10%,transparent); stroke:color-mix(in srgb,var(--warn) 45%,transparent)}
+.lineage rect.wbox{fill:color-mix(in srgb,var(--info) 10%,transparent); stroke:color-mix(in srgb,var(--info) 45%,transparent)}
+
+/* diff */
+.diff{display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid var(--line); border-radius:var(--r); overflow:hidden}
+@media(max-width:720px){ .diff{grid-template-columns:1fr} }
+.diff .side{padding:0}
+.diff .side + .side{border-left:1px solid var(--line)}
+.diff .s-h{padding:9px 13px; background:var(--panel-2); border-bottom:1px solid var(--line); font:600 9.5px/1 var(--f-mono); letter-spacing:.13em; text-transform:uppercase; color:var(--ink-faint); display:flex; justify-content:space-between}
+.diff .s-h.incoming{color:var(--info)}
+.drow{display:flex; justify-content:space-between; gap:12px; padding:8px 13px; border-bottom:1px solid var(--line-soft); font-family:var(--f-mono); font-size:11.5px}
+.drow span:first-child{color:var(--ink-faint)}
+.drow span:last-child{color:var(--ink-dim)}
+.drow.chg span:last-child{color:var(--info); font-weight:600}
+.drow.chg{background:color-mix(in srgb,var(--info) 7%,transparent)}
+
+/* token appendix */
+.swatch{border:1px solid var(--line); border-radius:var(--r); overflow:hidden}
+.swatch .chipc{height:56px}
+.swatch .meta{padding:8px 10px; font-family:var(--f-mono); font-size:10.5px; color:var(--ink-dim); display:flex; justify-content:space-between}
+.swatch .meta b{color:var(--ink); font-weight:600}
+.typerow{display:flex; align-items:baseline; gap:16px; padding:11px 0; border-bottom:1px solid var(--line-soft)}
+.typerow .lab{width:130px; flex:none; font:500 10px/1.4 var(--f-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint)}
+
+.caption{margin-top:12px; padding:12px 15px; border-left:2px solid var(--signal); background:color-mix(in srgb,var(--signal) 6%,transparent); border-radius:0 var(--r) var(--r) 0; font-size:12px; color:var(--ink-dim)}
+.caption b{color:var(--ink); font-weight:600}
+
+hr.rule{border:0; border-top:1px solid var(--line); margin:34px 0}
+
+/* hero */
+.hero{position:relative; border:1px solid var(--line); border-radius:var(--r-lg); overflow:hidden; background:linear-gradient(140deg,var(--panel),var(--panel-2) 60%,var(--panel)); padding:30px 26px; margin-bottom:22px}
+.hero .h-in{position:relative; z-index:2; max-width:62ch}
+.hero h1{font:700 40px/1.02 var(--f-display); letter-spacing:.02em; margin:14px 0 0}
+.hero h1 em{color:var(--signal); font-style:normal}
+.hero .tag{margin-top:12px; color:var(--ink-dim); font-size:13.5px}
+.hero .creed{margin-top:16px; display:flex; gap:8px; flex-wrap:wrap}
+.hero .creed span{font:500 10px/1 var(--f-mono); letter-spacing:.12em; text-transform:uppercase; color:var(--ink-faint); border:1px solid var(--line); padding:6px 9px; border-radius:999px}
+.hero .art{position:absolute; right:-40px; top:-30px; width:520px; height:340px; z-index:1; opacity:.5; pointer-events:none}
+.hero .art .cst{stroke:var(--signal); fill:none; opacity:.5}
+.hero .art circle.star{fill:var(--signal)}
+.hero .art .orbit{stroke:var(--ink-faint); fill:none; stroke-dasharray:2 5; opacity:.5}
+.hero .art .raven{fill:var(--signal)}
+
+@media(max-width:940px){
+  .shell{grid-template-columns:1fr}
+  .rail{position:static; height:auto; flex-direction:row; align-items:center; overflow-x:auto; gap:4px; padding:10px}
+  .rail .brand{padding:6px 8px; border-right:1px solid var(--line-soft); margin-right:4px}
+  .rail .sect,.rail .spacer,.rail .foot,.navlink .kbd{display:none}
+  .navlink{width:auto; white-space:nowrap}
+  .hero h1{font-size:30px}
+  .hero .art{opacity:.22}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important}
+}
+@keyframes beat{0%,100%{opacity:1}50%{opacity:.32}}
+@keyframes sweep{to{background-position:-220% 0}}
+@keyframes dash{to{stroke-dashoffset:-22}}
+</style>
+
+<div class="shell">
+  <!-- ================================================= RAIL ============ -->
+  <aside class="rail">
+    <div class="brand">
+      <span class="glyph">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3.4"/><path d="M12 2v3.2M12 18.8V22M2 12h3.2M18.8 12H22M4.9 4.9l2.3 2.3M16.8 16.8l2.3 2.3M19.1 4.9l-2.3 2.3M7.2 16.8l-2.3 2.3"/></svg>
+      </span>
+      <span class="wm">ODIN<span>·1</span></span>
+    </div>
+
+    <div class="sect mlabel">Console</div>
+    <button class="navlink active" data-goto="deck">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 13h8V3H3zM13 21h8V3h-8zM3 21h8v-6H3z"/></svg>
+      Operations Deck <span class="kbd">1</span>
+    </button>
+    <button class="navlink" data-goto="onboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg>
+      Onboard Source <span class="kbd">2</span>
+    </button>
+    <button class="navlink" data-goto="monitor">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+      Pipeline Monitor <span class="kbd">3</span>
+    </button>
+
+    <div class="sect mlabel">Diversions</div>
+    <button class="navlink" data-goto="waiting">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      Waiting Pipeline <span class="kbd">4</span>
+    </button>
+    <button class="navlink" data-goto="quarantine">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l8 4v5c0 5-3.2 8-8 9-4.8-1-8-4-8-9V7z"/><path d="M9.5 12h5"/></svg>
+      Quarantine <span class="kbd">5</span>
+    </button>
+
+    <div class="sect mlabel">Reference</div>
+    <button class="navlink" data-goto="system">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 12l9-5M12 12v10M12 12L3 7"/></svg>
+      Design System <span class="kbd">6</span>
+    </button>
+
+    <div class="spacer"></div>
+    <div class="foot">
+      <div class="row"><span>Env</span><span style="color:var(--ok)">Prod</span></div>
+      <div class="row"><span>Pipelines</span><span>12 active</span></div>
+      <div class="row"><span>Build</span><span>slice-1</span></div>
+    </div>
+  </aside>
+
+  <!-- ================================================= MAIN ============ -->
+  <div class="main">
+    <div class="cmdbar">
+      <div class="crumbs">ODIN <span style="opacity:.4">/</span> <b id="crumb">Operations Deck</b></div>
+      <div class="grow"></div>
+      <span class="chip env"><span class="dot ok"></span> PROD</span>
+      <span class="live"><i></i> LIVE</span>
+      <span class="clock" id="clock">00:00:00 UTC</span>
+      <button class="iconbtn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
+      </button>
+    </div>
+
+    <div class="stage">
+
+      <!-- ========================================= DECK ================ -->
+      <section class="screen" id="s-deck">
+        <div class="hero marked">
+          <svg class="art" viewBox="0 0 520 340" aria-hidden="true">
+            <ellipse class="orbit" cx="330" cy="150" rx="150" ry="150"/>
+            <ellipse class="orbit" cx="330" cy="150" rx="96" ry="150" transform="rotate(24 330 150)"/>
+            <path class="cst" d="M120 60 L210 120 L300 70 L360 150 L300 240 L200 220 L150 150 Z"/>
+            <circle class="star" cx="120" cy="60" r="2.6"/><circle class="star" cx="210" cy="120" r="2.6"/>
+            <circle class="star" cx="300" cy="70" r="2.6"/><circle class="star" cx="360" cy="150" r="2.6"/>
+            <circle class="star" cx="300" cy="240" r="2.6"/><circle class="star" cx="200" cy="220" r="2.6"/>
+            <circle class="star" cx="150" cy="150" r="2.6"/>
+            <path class="raven" d="M240 96c8-6 14-4 18 0-6 0-10 2-12 8-2-6-4-8-6-8zM196 210c9-7 16-5 20 0-7 0-11 2-13 8-2-6-4-8-7-8z"/>
+          </svg>
+          <div class="h-in">
+            <span class="eyebrow">Autonomous Data-Pipeline Infrastructure</span>
+            <h1>The pipeline that <em>watches itself.</em></h1>
+            <p class="tag">Connect a source once. Odin replicates its schema, generates the staging&nbsp;&rarr;&nbsp;production SQL, routes every batch, and quarantines what breaks &mdash; without a support ticket. Two ravens over the estate: <b>Huginn</b> reads structure, <b>Muninn</b> keeps the run log.</p>
+            <div class="creed">
+              <span>SQL-first</span><span>Set-based, never row-by-row</span><span>One transform point</span>
+              <span>Per-source isolation</span><span>No CDC</span><span>No automatic retry</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="shead">
+          <div class="no">01</div>
+          <div>
+            <span class="eyebrow">Module 9 &middot; 10.3</span>
+            <h1>Operations Deck</h1>
+            <p class="sub">Estate-wide health at a glance &mdash; rows landed, diversion pressure, and anything that has stopped and is waiting on a human.</p>
+          </div>
+        </div>
+
+        <div class="grid g-4" style="margin-bottom:16px">
+          <div class="panel kpi">
+            <div class="k-top"><span class="mlabel">Rows &rarr; production</span><span class="dot ok"></span></div>
+            <div class="k-val tnum">1,284,902 <small>/ 24h</small></div>
+            <span class="spark" data-hue="ok" data-pts="8,10,9,13,12,16,15,19,17,22,20,26,24,31,29,34"></span>
+            <span class="k-delta up">&#9650; 6.2% vs prior 24h</span>
+          </div>
+          <div class="panel kpi">
+            <div class="k-top"><span class="mlabel">Quarantine rate</span><span class="dot ok"></span></div>
+            <div class="k-val tnum">0.71<small>%</small></div>
+            <span class="spark" data-hue="warn" data-pts="18,14,16,12,15,11,13,10,12,9,11,8,10,9,8,7"></span>
+            <span class="k-delta down">&#9660; well under the 5% auto-pause line</span>
+          </div>
+          <div class="panel kpi">
+            <div class="k-top"><span class="mlabel">Pending restatements</span><span class="dot info"></span></div>
+            <div class="k-val tnum">3</div>
+            <span class="spark" data-hue="info" data-pts="0,0,1,1,1,2,2,2,3,3,2,3,3,4,3,3"></span>
+            <span class="k-delta flat">oldest waiting batch &mdash; 2d 4h</span>
+          </div>
+          <div class="panel kpi">
+            <div class="k-top"><span class="mlabel">Active pipelines</span><span class="dot run"></span></div>
+            <div class="k-val tnum">12 <small>/ 14</small></div>
+            <span class="spark" data-hue="signal" data-pts="12,12,11,12,13,12,12,14,13,12,12,13,12,12,13,12"></span>
+            <span class="k-delta flat">1 running &middot; 1 failed &middot; 12 idle</span>
+          </div>
+        </div>
+
+        <div class="grid g-2-1">
+          <div class="panel marked">
+            <div class="panel-h">
+              <h3>Pipeline health</h3><span class="mlabel">pipeline_health_summary</span>
+              <span class="grow"></span>
+              <span class="mlabel">Extract &middot; Stage &middot; Prod &middot; Biz</span>
+            </div>
+            <div class="tw">
+              <table class="data">
+                <thead><tr><th>Source / Table</th><th>Load type</th><th style="text-align:center">Layer status</th><th class="num">Last ok</th><th class="num">Qtn</th><th class="num">Waiting</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td class="m">erp_sales / <b style="color:var(--ink)">sales</b></td>
+                    <td><span class="pill idle">Incremental</span></td>
+                    <td style="text-align:center"><span class="dot ok"></span> <span class="dot ok"></span> <span class="dot ok"></span> <span class="dot ok"></span></td>
+                    <td class="num">2m ago</td><td class="num num0">0</td><td class="num numh">2</td>
+                  </tr>
+                  <tr class="run-row">
+                    <td class="m">crm_pg / <b style="color:var(--ink)">customers</b></td>
+                    <td><span class="pill idle">Full snapshot</span></td>
+                    <td style="text-align:center"><span class="dot ok"></span> <span class="dot ok"></span> <span class="dot run"></span> <span class="dot idle"></span></td>
+                    <td class="num">running</td><td class="num num0">0</td><td class="num num0">0</td>
+                  </tr>
+                  <tr class="fail-row">
+                    <td class="m">mongo_events / <b style="color:var(--ink)">events_flat</b></td>
+                    <td><span class="pill idle">Incremental</span></td>
+                    <td style="text-align:center"><span class="dot ok"></span> <span class="dot crit"></span> <span class="dot idle"></span> <span class="dot idle"></span></td>
+                    <td class="num" style="color:var(--crit)">failed</td><td class="num numh">41</td><td class="num num0">0</td>
+                  </tr>
+                  <tr>
+                    <td class="m">warehouse_csv / <b style="color:var(--ink)">inventory_snapshot</b></td>
+                    <td><span class="pill idle">Full snapshot</span></td>
+                    <td style="text-align:center"><span class="dot ok"></span> <span class="dot ok"></span> <span class="dot ok"></span> <span class="dot ok"></span></td>
+                    <td class="num">51m ago</td><td class="num num0">0</td><td class="num num0">0</td>
+                  </tr>
+                  <tr>
+                    <td class="m">finance_pg / <b style="color:var(--ink)">gl_entries</b></td>
+                    <td><span class="pill idle">Incremental</span></td>
+                    <td style="text-align:center"><span class="dot ok"></span> <span class="dot ok"></span> <span class="dot warn"></span> <span class="dot ok"></span></td>
+                    <td class="num">1h ago</td><td class="num num0">0</td><td class="num numh">1</td>
+                  </tr>
+                  <tr>
+                    <td class="m">hr_csv / <b style="color:var(--ink)">headcount</b></td>
+                    <td><span class="pill idle">Full snapshot</span></td>
+                    <td style="text-align:center"><span class="dot ok"></span> <span class="dot ok"></span> <span class="dot ok"></span> <span class="dot idle"></span></td>
+                    <td class="num">6h ago</td><td class="num num0">0</td><td class="num num0">0</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel marked">
+            <div class="panel-h"><h3>Alert feed</h3><span class="grow"></span><span class="mlabel">last 6h</span></div>
+            <div class="alert crit">
+              <div class="bar"></div>
+              <div class="a-body">
+                <div class="a-t"><b>Staging load failed</b> &mdash; mongo_events / events_flat</div>
+                <div class="a-m">14:02 UTC &middot; cast error surfaced downstream &middot; no auto-retry &mdash; DE action required</div>
+              </div>
+            </div>
+            <div class="alert warn">
+              <div class="bar"></div>
+              <div class="a-body">
+                <div class="a-t"><b>Quarantine spike</b> &mdash; events_flat crossed 3%</div>
+                <div class="a-m">14:02 UTC &middot; 41 rows &middot; reason cast:amount</div>
+              </div>
+            </div>
+            <div class="alert info">
+              <div class="bar"></div>
+              <div class="a-body">
+                <div class="a-t"><b>Waiting backlog</b> &mdash; 3 batches pending &gt; 24h</div>
+                <div class="a-m">oldest erp_sales / sales &middot; existence_value 2026-08-14</div>
+              </div>
+            </div>
+            <div class="alert info">
+              <div class="bar"></div>
+              <div class="a-body">
+                <div class="a-t"><b>Schema drift</b> &mdash; finance_pg / gl_entries header</div>
+                <div class="a-m">09:41 UTC &middot; NEW_COLUMN cost_center &middot; acknowledged</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="caption">
+          <b>Behaviour.</b> Every dot is one set-based SQL query against a control view. A failed stage does not roll to the next &mdash; the pipeline stops, raises the alert, and holds its marker so a re-trigger re-attempts cleanly. Nothing in Quarantine or Waiting is ever auto-reprocessed.
+        </div>
+      </section>
+
+      <!-- ========================================= ONBOARD ============= -->
+      <section class="screen" id="s-onboard" hidden>
+        <div class="shead">
+          <div class="no">02</div>
+          <div>
+            <span class="eyebrow">Module 1 &middot; 3 &middot; 8 &middot; 10.1</span>
+            <h1>Onboard Source</h1>
+            <p class="sub">A DE-driven, seven-step wizard. Nothing recurring is committed until a 1,000-row sample has been previewed and the load type approved.</p>
+          </div>
+        </div>
+
+        <div class="stepper">
+          <div class="step done"><span class="n">&#10003;</span>Configure</div>
+          <div class="step done"><span class="n">&#10003;</span>Connect</div>
+          <div class="step done"><span class="n">&#10003;</span>Sample</div>
+          <div class="step active"><span class="n">4</span>Preview &amp; load type</div>
+          <div class="step"><span class="n">5</span>Load config</div>
+          <div class="step"><span class="n">6</span>Schedule</div>
+          <div class="step"><span class="n">7</span>First run</div>
+        </div>
+
+        <div class="grid g-2-1" style="margin-top:16px">
+          <div class="panel marked">
+            <div class="panel-h">
+              <h3>Sample &mdash; 1,000 rows in staging</h3>
+              <span class="grow"></span>
+              <span class="mlabel">preview only &middot; nothing reaches production</span>
+            </div>
+            <div class="tw">
+              <table class="data">
+                <thead><tr><th>txn_id</th><th>customer_id</th><th>amount</th><th class="sd">sale_date</th><th>status</th></tr></thead>
+                <tbody>
+                  <tr><td class="m">T-100482</td><td class="m">C-2231</td><td class="num">149.00</td><td class="m" style="color:var(--signal)">2026-08-27</td><td class="m">settled</td></tr>
+                  <tr><td class="m">T-100483</td><td class="m">C-8890</td><td class="num">2,410.55</td><td class="m" style="color:var(--signal)">2026-08-27</td><td class="m">settled</td></tr>
+                  <tr><td class="m">T-100484</td><td class="m">C-1043</td><td class="num">18.99</td><td class="m" style="color:var(--signal)">2026-08-27</td><td class="m">refunded</td></tr>
+                  <tr><td class="m">T-100485</td><td class="m">C-5567</td><td class="num">903.20</td><td class="m" style="color:var(--signal)">2026-08-28</td><td class="m">settled</td></tr>
+                  <tr><td class="m">T-100486</td><td class="m">C-2231</td><td class="num">64.00</td><td class="m" style="color:var(--signal)">2026-08-28</td><td class="m">settled</td></tr>
+                  <tr><td class="m">T-100487</td><td class="m">C-7781</td><td class="num">1,200.00</td><td class="m" style="color:var(--signal)">2026-08-28</td><td class="m">pending</td></tr>
+                  <tr><td class="m">T-100488</td><td class="m">C-0099</td><td class="num">42.10</td><td class="m" style="color:var(--signal)">2026-08-29</td><td class="m">settled</td></tr>
+                  <tr><td class="m">T-100489</td><td class="m">C-3312</td><td class="num">755.75</td><td class="m" style="color:var(--signal)">2026-08-29</td><td class="m">settled</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pad">
+              <span class="mlabel">Load type</span>
+              <div class="opts" id="loadopts">
+                <div class="opt" data-opt="full">
+                  <div class="o-h"><span class="o-r"></span>Full snapshot</div>
+                  <p>Each load is one dated snapshot. If production already holds this <span class="mono">load_date</span>, delete it and reinsert. No existence column, no waiting pipeline.</p>
+                </div>
+                <div class="opt sel" data-opt="incr">
+                  <div class="o-h"><span class="o-r"></span>Incremental</div>
+                  <p>Rows whose existence value is new are inserted; rows whose value already exists in production divert to the waiting pipeline for a human decision.</p>
+                </div>
+              </div>
+
+              <span class="mlabel">Existence-check column</span>
+              <div class="selectish" style="margin-top:6px">
+                <span>sale_date &mdash; <b>DATE</b> &middot; monotonic across the sample</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </div>
+
+              <div class="selectish" style="margin-top:10px; cursor:pointer; color:var(--ink-faint)">
+                <span>Configure &mdash; per-column target types &amp; row-level natural key</span>
+                <span class="mono" style="color:var(--ink-faint)">optional &middot; deferred</span>
+              </div>
+
+              <div class="btnrow" style="margin-top:16px">
+                <button class="btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12l5 5L20 7"/></svg> Approve schema</button>
+                <button class="btn">Reject</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="panel pad marked" style="margin-bottom:16px">
+              <span class="eyebrow">Step 1 &mdash; recorded</span>
+              <dl class="kv" style="margin-top:12px">
+                <dt>Source</dt><dd><b>ERP Sales</b></dd>
+                <dt>Type</dt><dd>Structured file &middot; CSV</dd>
+                <dt>Connector</dt><dd>RDBMS tail</dd>
+                <dt>Owner</dt><dd>de-team@corp</dd>
+                <dt>Target table</dt><dd><b>sales</b></dd>
+                <dt>Columns</dt><dd>5 inferred &middot; all VARCHAR</dd>
+              </dl>
+            </div>
+            <div class="panel pad marked" style="margin-bottom:16px">
+              <span class="eyebrow">System will create</span>
+              <dl class="kv" style="margin-top:12px">
+                <dt>staging</dt><dd>staging.erp_sales_sales</dd>
+                <dt>production</dt><dd>production.erp_sales_sales</dd>
+                <dt>quarantine</dt><dd>quarantine.erp_sales_sales</dd>
+                <dt>waiting</dt><dd>waiting.erp_sales_sales</dd>
+                <dt>partition</dt><dd>by load_date</dd>
+              </dl>
+            </div>
+            <div class="note">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+              The transform SQL is generated once from the registry and never hand-edited. A verified schema change regenerates it and schedules a partition-by-partition migration.
+            </div>
+          </div>
+        </div>
+
+        <div class="caption">
+          <b>This screen is step 4 of 7.</b> Steps 5&ndash;7 set the extraction strategy (cursor / time-window / full), recurring-vs-one-time schedule, and fire the first real run &mdash; which registers the pipeline in the Task Scheduler.
+        </div>
+      </section>
+
+      <!-- ========================================= MONITOR ============= -->
+      <section class="screen" id="s-monitor" hidden>
+        <div class="shead">
+          <div class="no">03</div>
+          <div>
+            <span class="eyebrow">Module 8 &middot; 9 &middot; 10.3</span>
+            <h1>Pipeline Monitor</h1>
+            <p class="sub">The run log at <span class="mono">(run_id, batch_id)</span> grain. Per-run rows are written on a side connection, so a rolled-back transform still records exactly how far it got.</p>
+          </div>
+        </div>
+
+        <div class="panel marked" style="margin-bottom:16px">
+          <div class="panel-h"><h3>Lineage &mdash; erp_sales / sales</h3><span class="grow"></span><span class="mlabel">one pipeline per source per stage</span></div>
+          <div class="pad">
+            <svg class="lineage" viewBox="0 0 960 210" role="img" aria-label="Source to Staging to Production to Business, with Quarantine and Waiting diversions off the transform">
+              <!-- main path -->
+              <path class="flow" d="M150 60 H214"/>
+              <path class="flow" d="M338 60 H402"/>
+              <path class="flow" d="M526 60 H590"/>
+              <path class="flow" d="M714 60 H778"/>
+              <!-- nodes -->
+              <g><rect class="node" x="20" y="38" width="130" height="44" rx="4"/><text class="nlabel" x="85" y="58" text-anchor="middle">Source</text><text class="nsub" x="85" y="72" text-anchor="middle">CSV / TXT file</text></g>
+              <g><rect class="proc" x="214" y="42" width="124" height="36" rx="4"/><text class="nlabel" x="276" y="64" text-anchor="middle">extract</text></g>
+              <g><rect class="node" x="402" y="38" width="124" height="44" rx="4"/><text class="nlabel" x="464" y="58" text-anchor="middle">Staging</text><text class="nsub" x="464" y="72" text-anchor="middle">VARCHAR buffer</text></g>
+              <g><rect class="proc" x="590" y="42" width="124" height="36" rx="4"/><text class="nlabel" x="652" y="64" text-anchor="middle">transform</text></g>
+              <g><rect class="node prod" x="778" y="38" width="124" height="44" rx="4"/><text class="nlabel" x="840" y="58" text-anchor="middle" style="fill:var(--signal)">Production</text><text class="nsub" x="840" y="72" text-anchor="middle">typed &middot; partitioned</text></g>
+              <!-- business -->
+              <path class="div" style="stroke:var(--ink-faint)" d="M840 82 V128 H840"/>
+              <g><rect class="node" x="778" y="128" width="124" height="40" rx="4"/><text class="nlabel" x="840" y="152" text-anchor="middle">Business</text></g>
+              <!-- diversions off transform -->
+              <path class="div q" d="M652 78 V120 H470 V150"/>
+              <path class="div w" d="M652 78 V134 H636 V150"/>
+              <g><rect class="qbox" x="392" y="150" width="156" height="40" rx="4"/><text class="nlabel" x="470" y="167" text-anchor="middle" style="fill:var(--warn)">Quarantine</text><text class="nsub" x="470" y="181" text-anchor="middle">structurally bad</text></g>
+              <g><rect class="wbox" x="558" y="150" width="156" height="40" rx="4"/><text class="nlabel" x="636" y="167" text-anchor="middle" style="fill:var(--info)">Waiting</text><text class="nsub" x="636" y="181" text-anchor="middle">human decision</text></g>
+            </svg>
+          </div>
+        </div>
+
+        <div class="panel marked">
+          <div class="panel-h">
+            <h3>Run log</h3>
+            <span class="grow"></span>
+            <span class="chip">source: erp_sales</span>
+            <span class="chip">stage: all</span>
+            <span class="chip">status: all</span>
+          </div>
+          <div class="tw">
+            <table class="data">
+              <thead><tr>
+                <th>run_id</th><th>Stage</th><th>Source / Table</th><th class="num">Started</th><th class="num">Dur</th>
+                <th class="num">Processed</th><th class="num">&rarr; Prod</th><th class="num">&rarr; Wait</th><th class="num">Qtn</th><th>Status</th><th>By</th>
+              </tr></thead>
+              <tbody>
+                <tr>
+                  <td class="m">r_9f3c1a</td><td class="m">transform</td><td class="m">erp_sales / sales</td>
+                  <td class="num">14:06:11</td><td class="num">1.9s</td>
+                  <td class="num">4,120</td><td class="num numh">4,090</td><td class="num numh">30</td><td class="num num0">0</td>
+                  <td><span class="pill ok"><span class="dot"></span>success</span></td><td class="m">manual</td>
+                </tr>
+                <tr class="run-row">
+                  <td class="m">r_9f3c22</td><td class="m">transform</td><td class="m">crm_pg / customers</td>
+                  <td class="num">14:07:02</td><td class="num">&mdash;</td>
+                  <td class="num">62,300</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td class="num">&mdash;</td>
+                  <td><span class="pill run"><span class="dot run"></span>running</span></td><td class="m">scheduled</td>
+                </tr>
+                <tr class="fail-row" id="failRow" style="cursor:pointer">
+                  <td class="m">r_9f3b90</td><td class="m">extract</td><td class="m">mongo_events / events_flat</td>
+                  <td class="num">14:02:41</td><td class="num">0.4s</td>
+                  <td class="num">41</td><td class="num num0">0</td><td class="num num0">0</td><td class="num numh">41</td>
+                  <td><span class="pill crit"><span class="dot"></span>failed</span></td><td class="m">scheduled</td>
+                </tr>
+                <tr class="detail" id="failDetail" hidden><td colspan="11"><div class="detail-body">
+                  <div><span style="color:var(--ink-faint)">batch_id</span> &nbsp; b_7712fe &nbsp;&middot;&nbsp; <span style="color:var(--ink-faint)">triggered_by</span> scheduled &nbsp;&middot;&nbsp; <span style="color:var(--ink-faint)">chunk</span> 1 / 1</div>
+                  <div class="err">error &nbsp; cast:amount &mdash; 41 rows: value "N/A" is not a valid numeric(12,2). Whole rows diverted to quarantine.erp&hellip; no partial apply.</div>
+                  <div>production unchanged &middot; staging still holds the batch &middot; marker not advanced &mdash; a re-trigger after the fix re-attempts this exact batch</div>
+                </div></td></tr>
+                <tr>
+                  <td class="m">r_9f3b41</td><td class="m">extract</td><td class="m">erp_sales / sales</td>
+                  <td class="num">13:58:20</td><td class="num">2.7s</td>
+                  <td class="num">4,120</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td class="num">&mdash;</td>
+                  <td><span class="pill ok"><span class="dot"></span>success</span></td><td class="m">manual</td>
+                </tr>
+                <tr>
+                  <td class="m">r_9f3a05</td><td class="m">transform</td><td class="m">warehouse_csv / inventory_snapshot</td>
+                  <td class="num">13:15:00</td><td class="num">5.1s</td>
+                  <td class="num">210,441</td><td class="num numh">210,441</td><td class="num num0">0</td><td class="num num0">0</td>
+                  <td><span class="pill ok"><span class="dot"></span>success</span></td><td class="m">scheduled</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="caption">
+          <b>Row <span class="mono">r_9f3b90</span> is expandable.</b> Click it. A failure keeps the full diagnostic even though the run rolled back &mdash; which chunk, which reason, and the fact that the marker held so the retry is clean.
+        </div>
+      </section>
+
+      <!-- ========================================= WAITING ============= -->
+      <section class="screen" id="s-waiting" hidden>
+        <div class="shead">
+          <div class="no">04</div>
+          <div>
+            <span class="eyebrow">Module 4.7 &middot; 10.5a &middot; separate auth</span>
+            <h1>Waiting Pipeline</h1>
+            <p class="sub">Structurally valid rows whose existence value already sits in production. Applying them rewrites settled history &mdash; a content decision, so a human makes it. Reviewer auth is assigned per source, independent of the DE/AE roles.</p>
+          </div>
+        </div>
+
+        <div class="grid g-4" style="margin-bottom:16px">
+          <div class="panel kpi"><div class="k-top"><span class="mlabel">Pending batches</span><span class="dot info"></span></div><div class="k-val tnum">3</div></div>
+          <div class="panel kpi"><div class="k-top"><span class="mlabel">Rows held</span></div><div class="k-val tnum">37</div></div>
+          <div class="panel kpi"><div class="k-top"><span class="mlabel">Oldest pending</span><span class="dot warn"></span></div><div class="k-val tnum">2d <small>4h</small></div></div>
+          <div class="panel kpi"><div class="k-top"><span class="mlabel">Approved / 7d</span><span class="dot ok"></span></div><div class="k-val tnum">11</div></div>
+        </div>
+
+        <div class="grid g-2-1">
+          <div class="panel marked">
+            <div class="panel-h"><h3>Batch &mdash; wb_4a19c2</h3><span class="grow"></span><span class="pill info"><span class="dot"></span>pending</span></div>
+            <div class="pad">
+              <dl class="kv" style="margin-bottom:14px">
+                <dt>Source / table</dt><dd><b>erp_sales / sales</b></dd>
+                <dt>Existence value</dt><dd><b style="color:var(--info)">sale_date = 2026-08-14</b></dd>
+                <dt>Rows in batch</dt><dd>12</dd>
+                <dt>Raised by run</dt><dd>r_9e2201 &middot; 2d 4h ago</dd>
+              </dl>
+
+              <span class="mlabel">Held rows vs current production &mdash; sale_date 2026-08-14</span>
+              <div class="diff" style="margin-top:8px">
+                <div class="side">
+                  <div class="s-h">Production now</div>
+                  <div class="drow"><span>rows</span><span>12</span></div>
+                  <div class="drow"><span>sum(amount)</span><span>18,204.55</span></div>
+                  <div class="drow"><span>T-90012 amount</span><span>1,499.00</span></div>
+                  <div class="drow"><span>T-90019 status</span><span>pending</span></div>
+                  <div class="drow"><span>load_timestamp</span><span>2026-08-14 02:10</span></div>
+                </div>
+                <div class="side">
+                  <div class="s-h incoming">Incoming (waiting)</div>
+                  <div class="drow"><span>rows</span><span>12</span></div>
+                  <div class="drow chg"><span>sum(amount)</span><span>19,051.55</span></div>
+                  <div class="drow chg"><span>T-90012 amount</span><span>2,346.00</span></div>
+                  <div class="drow chg"><span>T-90019 status</span><span>settled</span></div>
+                  <div class="drow"><span>load_timestamp</span><span>2026-08-29 14:06</span></div>
+                </div>
+              </div>
+
+              <div class="btnrow" style="margin-top:16px">
+                <button class="btn ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12l5 5L20 7"/></svg> Approve &mdash; replace &amp; restate</button>
+                <button class="btn danger">Reject &mdash; drop batch</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="panel marked" style="margin-bottom:16px">
+              <div class="panel-h"><h3>Queue</h3><span class="grow"></span><span class="mlabel">waiting_batch_log</span></div>
+              <div class="tw"><table class="data">
+                <thead><tr><th>wbatch</th><th>Existence value</th><th class="num">Rows</th><th class="num">Age</th></tr></thead>
+                <tbody>
+                  <tr style="background:color-mix(in srgb,var(--signal) 7%,transparent)"><td class="m">wb_4a19c2</td><td class="m">sales &middot; 2026-08-14</td><td class="num">12</td><td class="num">2d 4h</td></tr>
+                  <tr><td class="m">wb_4a1a07</td><td class="m">sales &middot; 2026-08-21</td><td class="num">9</td><td class="num">1d 2h</td></tr>
+                  <tr><td class="m">wb_4a1b55</td><td class="m">gl_entries &middot; 2026-08-25</td><td class="num">16</td><td class="num">7h</td></tr>
+                </tbody>
+              </table></div>
+            </div>
+            <div class="note">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+              <span><b>Approve</b> deletes production's rows for that existence value, reinserts the held rows with <span class="mono">restated = true</span>, and the prior values stay visible in provenance. <b>Reject</b> drops the held rows untouched. An identical-value restatement still lands here &mdash; a silent "confirm unchanged" is treated as an integrity risk too.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================= QUARANTINE ========== -->
+      <section class="screen" id="s-quarantine" hidden>
+        <div class="shead">
+          <div class="no">05</div>
+          <div>
+            <span class="eyebrow">Module 4.3 &middot; 4.6 &middot; 10.5</span>
+            <h1>Quarantine</h1>
+            <p class="sub">Structural failures only &mdash; a field that will not cast, a value out of range, a required field empty, a string over the 256-char cap. The whole row is diverted, never partially applied. Fixed rows re-enter as a <em>new batch</em>; there is no patch-in-place.</p>
+          </div>
+        </div>
+
+        <div class="grid g-2-1">
+          <div class="panel marked">
+            <div class="panel-h"><h3>Batch &mdash; qb_1177fe</h3><span class="grow"></span><span class="pill warn"><span class="dot"></span>open</span></div>
+            <div class="pad">
+              <dl class="kv" style="margin-bottom:12px">
+                <dt>Source / table</dt><dd><b>mongo_events / events_flat</b></dd>
+                <dt>Reason</dt><dd><b style="color:var(--warn)">cast:amount</b> &mdash; not numeric(12,2)</dd>
+                <dt>Rows</dt><dd>41</dd>
+                <dt>Raised by run</dt><dd>r_9f3b90 &middot; 14:02 UTC</dd>
+              </dl>
+              <span class="mlabel">Held rows &mdash; verbatim VARCHAR from staging</span>
+              <div class="tw" style="margin-top:8px"><table class="data">
+                <thead><tr><th>event_id</th><th>entity_id</th><th>amount</th><th>window_start</th><th>unit</th></tr></thead>
+                <tbody>
+                  <tr><td class="m">E-55120</td><td class="m">dev-4471</td><td class="m" style="color:var(--crit)">N/A</td><td class="m">2026-08-29T10:00:00Z</td><td class="m">kWh</td></tr>
+                  <tr><td class="m">E-55121</td><td class="m">dev-4471</td><td class="m" style="color:var(--crit)">N/A</td><td class="m">2026-08-29T11:00:00Z</td><td class="m">kWh</td></tr>
+                  <tr><td class="m">E-55122</td><td class="m">dev-8890</td><td class="m" style="color:var(--crit)">--</td><td class="m">2026-08-29T10:00:00Z</td><td class="m">kWh</td></tr>
+                  <tr><td class="m">E-55123</td><td class="m">dev-0231</td><td class="m" style="color:var(--crit)">1,2e3</td><td class="m">2026-08-29T12:00:00Z</td><td class="m">kWh</td></tr>
+                </tbody>
+              </table></div>
+              <div class="btnrow" style="margin-top:16px">
+                <button class="btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg> Re-inject as new batch</button>
+                <button class="btn">Ignore</button>
+                <button class="btn">Escalate</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="panel marked" style="margin-bottom:16px">
+              <div class="panel-h"><h3>Open batches</h3><span class="grow"></span><span class="mlabel">quarantine_batch_log</span></div>
+              <div class="tw"><table class="data">
+                <thead><tr><th>qbatch</th><th>Reason</th><th class="num">Rows</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr style="background:color-mix(in srgb,var(--signal) 7%,transparent)"><td class="m">qb_1177fe</td><td class="m">cast:amount</td><td class="num">41</td><td><span class="pill warn">open</span></td></tr>
+                  <tr><td class="m">qb_10c204</td><td class="m">empty_required:sale_date</td><td class="num">3</td><td><span class="pill warn">open</span></td></tr>
+                  <tr><td class="m">qb_0ff1a8</td><td class="m">over_length:notes</td><td class="num">1</td><td><span class="pill idle">reinjected</span></td></tr>
+                  <tr><td class="m">qb_0fd930</td><td class="m">cast:qty</td><td class="num">7</td><td><span class="pill idle">ignored</span></td></tr>
+                </tbody>
+              </table></div>
+            </div>
+            <div class="note warn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>
+              <span>The 256-char cap is not cosmetic: one long, incompressible string in an indexed production column exceeds Postgres's btree entry limit and jams the bulk insert for the entire batch. Catching it per-row here defuses a one-row denial of service.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================= SYSTEM ============= -->
+      <section class="screen" id="s-system" hidden>
+        <div class="shead">
+          <div class="no">06</div>
+          <div>
+            <span class="eyebrow">Design language</span>
+            <h1>Design System</h1>
+            <p class="sub">One dark-first instrument palette, the IBM Plex superfamily set against Chakra Petch, and a small kit of state-bearing components. Every colour is a token; nothing is a literal.</p>
+          </div>
+        </div>
+
+        <div class="panel pad marked" style="margin-bottom:16px">
+          <span class="eyebrow">Palette</span>
+          <div class="grid g-4" style="margin-top:14px">
+            <div class="swatch"><div class="chipc" style="background:var(--void)"></div><div class="meta"><b>void</b><span>ground</span></div></div>
+            <div class="swatch"><div class="chipc" style="background:var(--panel)"></div><div class="meta"><b>panel</b><span>surface</span></div></div>
+            <div class="swatch"><div class="chipc" style="background:var(--raise)"></div><div class="meta"><b>raise</b><span>inset</span></div></div>
+            <div class="swatch"><div class="chipc" style="background:var(--line)"></div><div class="meta"><b>line</b><span>hairline</span></div></div>
+            <div class="swatch"><div class="chipc" style="background:var(--signal)"></div><div class="meta"><b>signal</b><span>accent</span></div></div>
+            <div class="swatch"><div class="chipc" style="background:var(--ok)"></div><div class="meta"><b>ok</b><span>healthy</span></div></div>
+            <div class="swatch"><div class="chipc" style="background:var(--warn)"></div><div class="meta"><b>warn</b><span>quarantine</span></div></div>
+            <div class="swatch"><div class="chipc" style="background:var(--crit)"></div><div class="meta"><b>crit</b><span>failed</span></div></div>
+            <div class="swatch"><div class="chipc" style="background:var(--info)"></div><div class="meta"><b>info</b><span>waiting</span></div></div>
+            <div class="swatch"><div class="chipc" style="background:var(--ink)"></div><div class="meta"><b>ink</b><span>text</span></div></div>
+            <div class="swatch"><div class="chipc" style="background:var(--ink-dim)"></div><div class="meta"><b>ink-dim</b><span>2nd</span></div></div>
+            <div class="swatch"><div class="chipc" style="background:var(--ink-faint)"></div><div class="meta"><b>ink-faint</b><span>label</span></div></div>
+          </div>
+          <p style="color:var(--ink-dim); font-size:12px; margin-top:14px; max-width:70ch">The accent is one cool signal-cyan and it does one job: interactive and live. Health, quarantine, failure and human-review each get their own hue so state reads by colour before it reads by word &mdash; and the four never borrow the accent.</p>
+        </div>
+
+        <div class="grid g-1-1">
+          <div class="panel pad marked">
+            <span class="eyebrow">Type</span>
+            <div style="margin-top:10px">
+              <div class="typerow"><span class="lab">Display / 40</span><span style="font:700 34px/1 var(--f-display); letter-spacing:.02em">Huginn &amp; Muninn</span></div>
+              <div class="typerow"><span class="lab">Heading / 23</span><span style="font:700 22px/1 var(--f-display)">Pipeline health</span></div>
+              <div class="typerow"><span class="lab">Body / 13</span><span style="font:400 13px/1.5 var(--f-sans)">Set-based SQL over the whole batch, every time.</span></div>
+              <div class="typerow"><span class="lab">Mono data / 12</span><span style="font-family:var(--f-mono); font-size:12px">r_9f3c1a &middot; 4,090 rows &middot; 1.9s</span></div>
+              <div class="typerow" style="border:0"><span class="lab">Micro label / 10</span><span class="mlabel">existence_check_column</span></div>
+            </div>
+          </div>
+
+          <div class="panel pad marked">
+            <span class="eyebrow">Components</span>
+            <div style="display:flex; flex-direction:column; gap:14px; margin-top:12px">
+              <div class="btnrow">
+                <button class="btn primary">Primary</button>
+                <button class="btn">Default</button>
+                <button class="btn ok">Approve</button>
+                <button class="btn danger">Reject</button>
+              </div>
+              <div class="btnrow">
+                <span class="pill ok"><span class="dot"></span>success</span>
+                <span class="pill run"><span class="dot run"></span>running</span>
+                <span class="pill crit"><span class="dot"></span>failed</span>
+                <span class="pill warn"><span class="dot"></span>open</span>
+                <span class="pill info"><span class="dot"></span>pending</span>
+                <span class="pill idle">idle</span>
+              </div>
+              <div class="btnrow" style="align-items:center">
+                <span class="dot ok"></span><span class="dot warn"></span><span class="dot crit"></span>
+                <span class="dot info"></span><span class="dot run"></span>
+                <span class="mlabel" style="margin-left:6px">status dots &mdash; glow encodes severity</span>
+              </div>
+              <div class="note" style="margin-top:2px">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+                Motion is functional only: a 1.3&ndash;1.7s pulse marks something live, a slow sweep marks a running row, transitions sit at 140ms. All of it collapses under <span class="mono">prefers-reduced-motion</span>.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="caption">
+          <b>Implementation note.</b> This maps onto the existing <span class="mono">src/odin/web/</span> stack &mdash; FastAPI + Jinja2 + htmx, server-rendered, no build step. The token block replaces <span class="mono">app.css</span> <span class="mono">:root</span>; components become Jinja macros. Nothing here needs a framework.
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---- theme ---- */
+  var root = document.documentElement, tkey = "odin-theme";
+  try{ var saved = localStorage.getItem(tkey); if(saved) root.setAttribute("data-theme", saved); }catch(e){}
+  document.getElementById("themeBtn").addEventListener("click", function(){
+    var cur = root.getAttribute("data-theme");
+    if(!cur){ cur = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; }
+    var next = cur === "dark" ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try{ localStorage.setItem(tkey, next); }catch(e){}
+  });
+
+  /* ---- nav ---- */
+  var names = {deck:"Operations Deck", onboard:"Onboard Source", monitor:"Pipeline Monitor",
+               waiting:"Waiting Pipeline", quarantine:"Quarantine", system:"Design System"};
+  var links = [].slice.call(document.querySelectorAll(".navlink"));
+  function go(id){
+    links.forEach(function(l){ l.classList.toggle("active", l.dataset.goto === id); });
+    ["deck","onboard","monitor","waiting","quarantine","system"].forEach(function(s){
+      document.getElementById("s-"+s).hidden = (s !== id);
+    });
+    document.getElementById("crumb").textContent = names[id] || "Operations Deck";
+    window.scrollTo({top:0, behavior:"auto"});
+  }
+  links.forEach(function(l){ l.addEventListener("click", function(){ go(l.dataset.goto); }); });
+  addEventListener("keydown", function(e){
+    if(e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+    var map = {"1":"deck","2":"onboard","3":"monitor","4":"waiting","5":"quarantine","6":"system"};
+    if(map[e.key]) go(map[e.key]);
+  });
+
+  /* ---- clock ---- */
+  var cl = document.getElementById("clock");
+  function tick(){
+    var d = new Date();
+    function p(n){ return String(n).padStart(2,"0"); }
+    cl.textContent = p(d.getUTCHours())+":"+p(d.getUTCMinutes())+":"+p(d.getUTCSeconds())+" UTC";
+  }
+  tick(); setInterval(tick, 1000);
+
+  /* ---- sparklines ---- */
+  var hues = {ok:"var(--ok)", warn:"var(--warn)", info:"var(--info)", signal:"var(--signal)"};
+  [].slice.call(document.querySelectorAll(".spark")).forEach(function(el){
+    var pts = el.dataset.pts.split(",").map(Number);
+    var w = 160, h = 34, pad = 3;
+    var min = Math.min.apply(null, pts), max = Math.max.apply(null, pts);
+    var span = (max - min) || 1;
+    var step = (w - pad*2) / (pts.length - 1);
+    var xy = pts.map(function(v,i){
+      var x = pad + i*step;
+      var y = pad + (h - pad*2) * (1 - (v - min)/span);
+      return [x, y];
+    });
+    var line = xy.map(function(p,i){ return (i?"L":"M") + p[0].toFixed(1) + " " + p[1].toFixed(1); }).join(" ");
+    var area = line + " L " + xy[xy.length-1][0].toFixed(1) + " " + h + " L " + xy[0][0].toFixed(1) + " " + h + " Z";
+    var col = hues[el.dataset.hue] || "var(--signal)";
+    var uid = "g" + Math.random().toString(36).slice(2,8);
+    var last = xy[xy.length-1];
+    el.innerHTML =
+      '<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" width="100%" height="'+h+'">' +
+        '<defs><linearGradient id="'+uid+'" x1="0" x2="0" y1="0" y2="1">' +
+          '<stop offset="0" stop-color="'+col+'" stop-opacity="0.28"/>' +
+          '<stop offset="1" stop-color="'+col+'" stop-opacity="0"/>' +
+        '</linearGradient></defs>' +
+        '<path d="'+area+'" fill="url(#'+uid+')"/>' +
+        '<path d="'+line+'" fill="none" stroke="'+col+'" stroke-width="1.4" vector-effect="non-scaling-stroke"/>' +
+        '<circle cx="'+last[0].toFixed(1)+'" cy="'+last[1].toFixed(1)+'" r="2" fill="'+col+'"/>' +
+      '</svg>';
+  });
+
+  /* ---- onboard radio ---- */
+  var opts = document.getElementById("loadopts");
+  if(opts){
+    [].slice.call(opts.querySelectorAll(".opt")).forEach(function(o){
+      o.addEventListener("click", function(){
+        [].slice.call(opts.querySelectorAll(".opt")).forEach(function(x){ x.classList.remove("sel"); });
+        o.classList.add("sel");
+      });
+    });
+  }
+
+  /* ---- steppers ---- */
+  [].slice.call(document.querySelectorAll(".stepper .step")).forEach(function(s, i, all){
+    s.addEventListener("click", function(){
+      all.forEach(function(x, j){
+        x.classList.toggle("active", j === i);
+        x.classList.toggle("done", j < i);
+      });
+    });
+  });
+
+  /* ---- run-log expand ---- */
+  var fr = document.getElementById("failRow"), fd = document.getElementById("failDetail");
+  if(fr && fd){ fr.addEventListener("click", function(){ fd.hidden = !fd.hidden; }); }
+})();
+</script>
+
+</body></html>

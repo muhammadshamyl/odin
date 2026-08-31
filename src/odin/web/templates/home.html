@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Odin — Operations Deck{% endblock %}
+{% block crumbs %}<b>Operations Deck</b>{% endblock %}
+{% block topbar_actions %}<a class="btn primary" href="/onboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Onboard source</a>{% endblock %}
+{% block body %}
+{% set k = deck.kpi %}
+
+<div class="hero marked">
+  <svg class="art" viewBox="0 0 520 340" aria-hidden="true">
+    <ellipse class="orbit" cx="330" cy="150" rx="150" ry="150"/>
+    <ellipse class="orbit" cx="330" cy="150" rx="96" ry="150" transform="rotate(24 330 150)"/>
+    <path class="cst" d="M120 60 L210 120 L300 70 L360 150 L300 240 L200 220 L150 150 Z"/>
+    <circle class="star" cx="120" cy="60" r="2.6"/><circle class="star" cx="210" cy="120" r="2.6"/>
+    <circle class="star" cx="300" cy="70" r="2.6"/><circle class="star" cx="360" cy="150" r="2.6"/>
+    <circle class="star" cx="300" cy="240" r="2.6"/><circle class="star" cx="200" cy="220" r="2.6"/>
+    <circle class="star" cx="150" cy="150" r="2.6"/>
+    <path class="raven" d="M240 96c8-6 14-4 18 0-6 0-10 2-12 8-2-6-4-8-6-8zM196 210c9-7 16-5 20 0-7 0-11 2-13 8-2-6-4-8-7-8z"/>
+  </svg>
+  <div class="h-in">
+    <span class="eyebrow">Autonomous Data-Pipeline Infrastructure</span>
+    <h1>The pipeline that <em>watches itself.</em></h1>
+    <p class="tag">Connect a source once. Odin replicates its schema, generates the staging&nbsp;&rarr;&nbsp;production SQL, routes every batch, and quarantines what breaks — without a support ticket.</p>
+    <div class="creed">
+      <span>SQL-first</span><span>Set-based, never row-by-row</span><span>One transform point</span>
+      <span>Per-source isolation</span><span>No CDC</span><span>No automatic retry</span>
+    </div>
+  </div>
+</div>
+
+<div class="shead">
+  <div class="no">01</div>
+  <div>
+    <span class="eyebrow">Module 9 · 10.3</span>
+    <h1>Operations Deck</h1>
+    <p class="sub">Estate-wide health at a glance — rows landed, diversion pressure, and anything that has stopped and is waiting on a human. A failed stage stops and holds its marker for a clean re-trigger.</p>
+  </div>
+</div>
+
+<div class="grid g-4" style="margin-bottom:16px">
+  <div class="panel kpi">
+    <div class="k-top"><span class="mlabel">Rows → production</span><span class="sdot ok"></span></div>
+    <div class="k-val tnum">{{ "{:,}".format(k.prod_24h) }} <small>/ 24h</small></div>
+    <span class="spark" data-hue="ok" data-pts="{{ deck.spark.prod }}"></span>
+    {% if k.prod_delta_pct is none %}
+      <span class="k-delta flat">no prior-24h baseline yet</span>
+    {% elif k.prod_delta_pct >= 0 %}
+      <span class="k-delta up">▲ {{ "%.1f"|format(k.prod_delta_pct) }}% vs prior 24h</span>
+    {% else %}
+      <span class="k-delta down">▼ {{ "%.1f"|format(-k.prod_delta_pct) }}% vs prior 24h</span>
+    {% endif %}
+  </div>
+
+  <div class="panel kpi">
+    <div class="k-top"><span class="mlabel">Quarantine rate</span>
+      <span class="sdot {{ 'ok' if k.qtn_rate < k.qtn_pause_line else 'crit' }}"></span></div>
+    <div class="k-val tnum">{{ "%.2f"|format(k.qtn_rate) }}<small>%</small></div>
+    <span class="spark" data-hue="warn" data-pts="{{ deck.spark.qtn }}"></span>
+    {% if k.qtn_rate < k.qtn_pause_line %}
+      <span class="k-delta down">▼ under the {{ k.qtn_pause_line|int }}% auto-pause line</span>
+    {% else %}
+      <span class="k-delta up">▲ over the {{ k.qtn_pause_line|int }}% auto-pause line</span>
+    {% endif %}
+  </div>
+
+  <div class="panel kpi">
+    <div class="k-top"><span class="mlabel">Pending restatements</span><span class="sdot info"></span></div>
+    <div class="k-val tnum">{{ k.pending_batches }}</div>
+    <span class="spark" data-hue="info" data-pts="{{ deck.spark.waiting }}"></span>
+    <span class="k-delta flat">
+      {%- if k.pending_batches %}oldest waiting batch — {{ k.oldest_wait_age }}{% else %}nothing waiting{% endif -%}
+    </span>
+  </div>
+
+  <div class="panel kpi">
+    <div class="k-top"><span class="mlabel">Active pipelines</span>
+      <span class="sdot {{ 'run' if k.running_now else 'ok' }}"></span></div>
+    <div class="k-val tnum">{{ k.pipelines_active }} <small>/ {{ k.pipelines_total }}</small></div>
+    <span class="spark" data-hue="signal" data-pts="{{ deck.spark.active }}"></span>
+    <span class="k-delta flat">{{ k.running_now }} running · {{ k.failed_now }} failed · {{ k.idle_now }} idle</span>
+  </div>
+</div>
+
+<div class="grid g-2-1">
+  <div class="panel marked">
+    <div class="panel-h">
+      <h3>Pipeline health</h3>
+      <span class="mlabel">registry × run_log</span>
+      <span class="grow"></span>
+      <span class="mlabel">Extract · Stage · Prod · Biz</span>
+      <a class="btn sm ghost" href="/runs">All runs →</a>
+    </div>
+    {% if deck.health %}
+    <div class="tw">
+      <table class="data">
+        <thead><tr>
+          <th>Source / Table</th><th>Load type</th>
+          <th style="text-align:center">Layer status</th>
+          <th class="num">Last ok</th><th class="num">Qtn</th><th class="num">Waiting</th><th></th>
+        </tr></thead>
+        <tbody>
+        {% for h in deck.health %}
+        <tr class="{{ 'run-row' if h.row_state == 'run' }}{{ 'fail-row' if h.row_state == 'fail' }}">
+          <td data-label="Source / Table" class="m">{{ h.source_id }} / <b style="color:var(--text)">{{ h.table_name }}</b></td>
+          <td data-label="Load type"><span class="pill idle">{{ 'Incremental' if h.load_type == 'INCREMENTAL' else 'Full snapshot' }}</span></td>
+          <td data-label="Layer status" style="text-align:center; white-space:nowrap">
+            <span class="sdot {{ h.extract }}"></span>
+            <span class="sdot {{ h.staging }}"></span>
+            <span class="sdot {{ h.production }}"></span>
+            <span class="sdot {{ h.business }}"></span>
+          </td>
+          <td data-label="Last ok" class="num m">
+            {%- if h.last_ok %}<time class="reltime" datetime="{{ h.last_ok.isoformat() }}">{{ h.last_ok }}</time>{% else %}—{% endif -%}
+          </td>
+          <td data-label="Qtn" class="num {{ 'numh' if h.qtn_rows else 'num0' }}">{{ h.qtn_rows }}</td>
+          <td data-label="Waiting" class="num {{ 'numh' if h.wait_rows else 'num0' }}">{{ h.wait_rows }}</td>
+          <td data-label=""><a class="btn sm ghost" href="/t/{{ h.source_id }}/{{ h.table_name }}">Open</a></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">
+      <div class="art">◇</div>
+      <p>No sources registered.</p>
+      <p><a class="btn primary" href="/onboard">Onboard your first source</a></p>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="panel marked">
+    <div class="panel-h"><h3>Alert feed</h3><span class="grow"></span><span class="mlabel">live</span></div>
+    {% for a in deck.alerts %}
+    <div class="alert {{ a.kind }}">
+      <div class="bar"></div>
+      <div class="a-body">
+        <div class="a-t">{{ a.title }}</div>
+        <div class="a-m">{{ a.meta }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="caption">
+  <b>Behaviour.</b> Every dot is one set-based check against the run log. A failed stage does
+  not roll to the next — the pipeline stops, raises the alert, and holds its marker so a
+  re-trigger re-attempts cleanly. Nothing in Quarantine or Waiting is ever auto-reprocessed.
+</div>
+
+{% endblock %}

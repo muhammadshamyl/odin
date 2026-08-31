@@ -1,0 +1,2 @@
+{% from "_macros.html" import waiting_panel, quarantine_panel -%}
+{% if panel.which == 'waiting' %}{{ waiting_panel(panel) }}{% else %}{{ quarantine_panel(panel) }}{% endif %}
