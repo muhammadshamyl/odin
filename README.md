@@ -86,3 +86,25 @@ transform.run_transform("erp_sales", "sales")
 - **Collision routing** is DE-configured: `FULL_SNAPSHOT` overwrites its own `load_date`; `INCREMENTAL` diverts rows already in production → `waiting.<t>`, matched by a single `existence_check_column` value **or** a composite `natural_key` (hashed `nk bigint`, indexed, matched with a set-based join + raw-column tie-break).
 - Structurally bad rows → `quarantine.<t>` (re-inject as a new batch); reason + counts in `quarantine_batch_log` / `waiting_batch_log`.
 - **No CDC. No automatic retry.** A failure stops and alerts; a DE fixes and re-triggers.
+
+## Housekeeping (disk)
+
+Nothing prunes these yet (Module 2 §2.5 retention sweep is unbuilt), so they grow with every load:
+
+- **`web_uploads/`** — a copy of every file dropped on the web UI.
+- **`staging_files/<source>/<table>/<date>/`** — a second dated copy landed by the extract step.
+
+Both are just landing-zone copies; the pipeline never re-reads them once a run has consumed the file. Safe to clear:
+
+```bash
+rm -rf web_uploads/* staging_files/*
+```
+
+In Postgres, a resolved `waiting.<t>` / `quarantine.<t>` can hold reclaimable dead space after a large batch. To reclaim, once the pipeline is idle:
+
+```sql
+TRUNCATE waiting.<table>;        -- only if no batches are still pending
+TRUNCATE production.<table>;     -- drops all its load_date partitions' rows; keeps the pipeline registered
+```
+
+Or drop a pipeline whole from its table page (**Delete pipeline**) / the SQL Console danger zone.

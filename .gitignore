@@ -11,3 +11,5 @@ dist/
 # local tooling / per-user state
 .claude/settings.local.json
 .impeccable/
+
+.DS_Store
