@@ -434,7 +434,8 @@ table.data td{padding:10px 12px; border-bottom:1px solid var(--border-soft); ver
 table.data tbody tr{transition:background .12s var(--ease)}
 table.data tbody tr:hover{background:color-mix(in srgb,var(--accent) 6%,transparent)}
 table.data td.mono,table.data td.m{font-family:var(--mono); font-size:11.5px; color:var(--text-soft)}
-table.data td.num{font-family:var(--mono); font-variant-numeric:tabular-nums; text-align:right}
+table.data td.num{font-family:var(--mono); font-variant-numeric:tabular-nums; text-align:center}
+table.data th.num{text-align:center}
 table.data tr.is-running,table.data tr.run-row{
   background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--accent) 14%,transparent),transparent);
   background-size:220% 100%; animation:sweep 1.8s linear infinite;

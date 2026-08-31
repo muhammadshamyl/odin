@@ -20,7 +20,7 @@ Production is the typed, partitioned correctness boundary. The **staging → pro
 - The production write is **DE-configured** (base build):
   - `FULL_SNAPSHOT` — delete production's rows for this load's `load_date`, then insert every surviving row. No existence column, no waiting pipeline.
   - `INCREMENTAL` — rows whose `existence_check_column` value is already in production (exact match) → `waiting.<tbl>` (one `waiting_batch_log` row per value); the rest → insert.
-- Row-level upsert on a `natural_key` is a later per-table "Configure" option, not in the base build
+- A composite `natural_key` (hashed `nk`, waiting divert) is built (§6.2); row-level `ON CONFLICT` upsert is still deferred
 - Every row carries system `load_date` / `load_timestamp`; `load_date` is the partition column
 - **Production tables are partitioned by `load_date`** — fixed (D5.2 / D6.6)
 - **No CDC, no row-level deletes** in the base build — `restated` is set when an approved waiting batch replaces rows for an existence value
@@ -90,7 +90,7 @@ Module 11 has already re-emitted the transform SQL with the new cast.
 ## Production Table Structure
 
 ```sql
-CREATE TABLE production_erp_transactions (
+CREATE TABLE production.erp_transactions (
     -- source columns at their registered types; NOT NULL / PK only where the DE registered them
     transaction_id          VARCHAR,
     customer_id             VARCHAR,
@@ -108,7 +108,7 @@ CREATE TABLE production_erp_transactions (
 )
 -- PARTITIONED BY RANGE (load_date)
 -- base build: no row-level UNIQUE; collisions handled by load_type routing (Module 4 §4.4).
--- a later "Configure" adds UNIQUE(<natural_key>) + row-level upsert.
+-- when a natural_key is set: + nk bigint and a NON-UNIQUE nk btree index (never a UNIQUE constraint).
 -- waiting.<tbl> is `LIKE` this table + a wbatch_id column.
 ```
 
@@ -150,7 +150,7 @@ crash partway → full rollback; run FAILED; no auto-retry; DE re-triggers after
 ## Resolved
 
 - Single transform point; blocking lock; one transaction per run; truncate staging only on full success; all set-based SQL, never row-by-row
-- **Collision routing** (base build) is DE-configured — `FULL_SNAPSHOT` overwrites its `load_date`; `INCREMENTAL` diverts rows whose exact `existence_check_column` value is already in production → `waiting.<tbl>`. Row-level upsert / natural key is a later "Configure" option.
+- **Collision routing** (base build) is DE-configured — `FULL_SNAPSHOT` overwrites its `load_date`; `INCREMENTAL` diverts rows already in production → `waiting.<tbl>`, matched by an exact `existence_check_column` value **or** a composite `natural_key` (hashed `nk`, set-based join). Both **divert** to waiting — row-level `ON CONFLICT` upsert is still deferred.
 - Diversions are per-table tables in the `quarantine` / `waiting` schemas; reason + counts per batch in `quarantine_batch_log` / `waiting_batch_log`
 - Every row carries system `load_date` / `load_timestamp`; production partitioned by `load_date`
 - **No CDC, no row-level deletes** in the base build (supersedes D6.1)

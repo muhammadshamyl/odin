@@ -19,9 +19,13 @@ uv run python -m odin.migrate                # apply sql/*.sql to $ODIN_DATABASE
 | Onboarding — header → registry + staging/production/quarantine/waiting tables | 1/3 | ✅ `odin/registry.py` |
 | **Extract** — land file → Check 1 → bulk-load to staging | 1/2 | ✅ `odin/extract.py` |
 | **Transform** — set-based structural filter → quarantine → load-type routing → truncate | 4/6 | ✅ `odin/transform.py` |
+| **INCREMENTAL routing** — single `existence_check_column`, or a **composite natural key** (hashed `nk bigint` + index, one set-based join) | 3/4/6 | ✅ `odin/ddl.py`, `transform._load_incremental_nk` |
+| **Physical naming** — one schema per layer, table = slugged DE name, globally unique | 3 | ✅ `odin/naming.py`, `sql/004` |
 | **Resolve** — waiting approve/reject, quarantine re-inject/ignore | 4/10 | ✅ `odin/resolve.py` |
+| **Production re-typing** — test-cast every value, then rebuild the table in place | 3/6 | ✅ `registry.retype_table` |
 | **CLI** — `onboard` / `run-extract` / `run-transform` / `ingest` / `runs` / `waiting` / `quarantine` / `web` | 10 | ✅ `odin/cli.py` |
-| **Web UI** — home, onboard wizard, table page, run log, waiting + quarantine review | 10 | ✅ `odin/web/` |
+| **Web UI** — deck, onboard wizard, table page (Load to Production, lineage, delete pipeline), run log, waiting + quarantine review | 10 | ✅ `odin/web/` |
+| **SQL Console** — guard-railed ad-hoc SQL (classify → read-only / commit-or-discard / typed-name confirm), `sql_console_log` audit | 10 | ✅ `odin/sqlconsole.py`, `/sql` |
 | Adversarial test suite (spec §15) | — | ⏳ next |
 
 Feature-by-feature progress for all 11 modules: [`claude/BUILD_STATUS.md`](claude/BUILD_STATUS.md).
@@ -33,6 +37,7 @@ uv run odin migrate
 uv run odin onboard --name "ERP Sales" --table sales \
     --from-file data/sales_sample.csv \
     --load-type INCREMENTAL --existence-column sale_date
+    # or a composite key:  --natural-key "txn_id,sale_date"
 uv run odin ingest erp_sales sales data/sales_sample.csv      # extract + transform
 uv run odin runs --source erp_sales
 uv run odin waiting list --source erp_sales
@@ -49,12 +54,16 @@ Add `--json` before any subcommand for machine-readable output.
 uv run odin web            # http://127.0.0.1:8000  (--host / --port / --reload)
 ```
 
-Server-rendered, no auth (local tool). Screens: **home** (registered tables + recent runs),
-**Onboard** (upload CSV/TXT → 50-row preview → pick load type + existence column → create,
-optionally run now), **table page** (config, upload-and-extract, run-transform, per-table
-waiting/quarantine/runs), **Runs** (filterable run log), **Waiting** (pending batches →
-held rows vs production side by side → approve/reject), **Quarantine** (open batches → held
-rows → re-inject/ignore). Every action calls the same functions as the CLI.
+Server-rendered, no auth (local tool). Screens: **Operations Deck** (registered tables +
+recent runs, one row per `run_id` with a pill per stage), **Onboard** (upload CSV/TXT →
+50-row preview → pick load type + existence column *or* a composite natural key → set
+column types → create, optionally run now), **table page** (config, **Load to Production**
+one-click extract→transform, animated lineage, self-refreshing KPI cards, re-typing,
+per-table waiting/quarantine/runs, delete-pipeline danger zone; standalone extract /
+transform under "Manual steps"), **Runs** (filterable run log), **Waiting** / **Quarantine**
+review (held rows vs production side by side → approve/reject / re-inject/ignore),
+**SQL Console** (`/sql` — guard-railed ad-hoc SQL). Every action calls the same functions
+as the CLI.
 
 ## Same path from Python
 
@@ -72,6 +81,7 @@ transform.run_transform("erp_sales", "sales")
 ## Principles (from the design docs)
 
 - One transform point; staging is an ephemeral retry buffer (truncated after each confirmed load). Every check is set-based SQL over the whole batch — never row-by-row.
-- **Collision routing** is DE-configured: `FULL_SNAPSHOT` overwrites its own `load_date`; `INCREMENTAL` diverts rows whose `existence_check_column` value already exists in production → `waiting.<src>_<tbl>`.
-- Structurally bad rows → `quarantine.<src>_<tbl>` (re-inject as a new batch); reason + counts in `quarantine_batch_log` / `waiting_batch_log`.
+- **Physical tables**: one schema per layer — `staging.<t>` / `production.<t>` / `quarantine.<t>` / `waiting.<t>`, where `<t>` is the slugged DE-given table name (no source prefix), globally unique.
+- **Collision routing** is DE-configured: `FULL_SNAPSHOT` overwrites its own `load_date`; `INCREMENTAL` diverts rows already in production → `waiting.<t>`, matched by a single `existence_check_column` value **or** a composite `natural_key` (hashed `nk bigint`, indexed, matched with a set-based join + raw-column tie-break).
+- Structurally bad rows → `quarantine.<t>` (re-inject as a new batch); reason + counts in `quarantine_batch_log` / `waiting_batch_log`.
 - **No CDC. No automatic retry.** A failure stops and alerts; a DE fixes and re-triggers.

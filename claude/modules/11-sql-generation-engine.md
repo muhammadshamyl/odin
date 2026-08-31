@@ -30,9 +30,10 @@ Generates the SQL that moves data from **staging to production**, deterministica
 | Staging table DDL (all VARCHAR + metadata `load_date` / `load_timestamp`, no constraints) | Primary | `registry_columns` |
 | Production table DDL (typed, `PARTITION BY RANGE(load_date)`, `restated` column; no row-level UNIQUE in the base build) | Primary | `registry_columns`, `registry_tables` |
 | `quarantine.<tbl>` DDL (`LIKE` staging + `qbatch_id`) and `waiting.<tbl>` DDL (`LIKE` production + `wbatch_id`) | Primary | `registry_columns`, `registry_tables` |
+| Composite-key routing — `nk bigint` column + non-unique btree index on production & waiting; the `hashtextextended(...)` key expression reused in the transform | ✅ built (`ddl.natural_key_sql` / `nk_index_ddl`) | `registry_tables.natural_key` |
 | Scoping query — CURSOR / TIME_WINDOW / FULL (Module 1) | Primary | `registry_tables` (strategy, cursor/window columns), column list |
 | `quarantine_batch_log`, `waiting_batch_log` — control-plane tables, DDL fixed (in `001_core.sql`) | — | — |
-| Row-level upsert transform (`ON CONFLICT (natural_key)`) | Later, when `natural_key` is set via "Configure" | `registry_tables.natural_key` |
+| Row-level `ON CONFLICT` upsert transform | Later — the base build **diverts** colliding keys to waiting, it does not upsert | `registry_tables.natural_key` |
 | Business layer join / aggregation SQL (Module 7) | Later | `join_registry`, `metrics_registry` |
 
 ---
@@ -47,7 +48,7 @@ Generates the SQL that moves data from **staging to production**, deterministica
 ### 11.2 Registry Reader
 - Pulls the current (or a pinned) `schema_version` for a source + table
 - Column model: name, order, source/target type, nullable, PK, cursor/window flag
-- Table model: staging/production targets, `load_type` + `existence_check_column`, extraction strategy + cursor/window columns, `natural_key` (NULL in base build)
+- Table model: staging/production targets, `load_type` + `existence_check_column` + `natural_key` (ordered comma-list; when set it drives `nk`-hash routing and supersedes `existence_check_column`), extraction strategy + cursor/window columns
 
 ### 11.3 Transform SQL Builder
 Emits the transform in the fixed order from Module 6 §6.2, all set-based:
@@ -56,24 +57,25 @@ Emits the transform in the fixed order from Module 6 §6.2, all set-based:
 2. **Business rules** — apply active `quality_rules` to the survivors in the write `SELECT`.
 3. **Route by `load_type`:**
    - `FULL_SNAPSHOT` — `production_partition_ddl(:load_date)` → `DELETE FROM production.<t> WHERE load_date = :load_date` → `INSERT ... SELECT`.
-   - `INCREMENTAL` — `SELECT DISTINCT E::text, count(*) FROM staging s WHERE EXISTS (SELECT 1 FROM production.<t> p WHERE p.E::text = s.E::text) GROUP BY 1`; per value → `INSERT INTO waiting.<tbl> SELECT ..., :wbatch_id ... WHERE E::text = :value` + `waiting_batch_log` row + `DELETE` from staging; then `INSERT ... SELECT` the remaining survivors into production.
+   - `INCREMENTAL` + `existence_check_column` — `SELECT DISTINCT E::text, count(*) FROM staging s WHERE EXISTS (SELECT 1 FROM production.<t> p WHERE p.E::text = s.E::text) GROUP BY 1`; per value → `INSERT INTO waiting.<tbl> SELECT ..., :wbatch_id ... WHERE E::text = :value` + `waiting_batch_log` row + `DELETE` from staging; then `INSERT ... SELECT` the remaining survivors into production.
+   - `INCREMENTAL` + `natural_key` — reuse `ddl.natural_key_sql(...)` for the key expression. `collides = EXISTS (SELECT 1 FROM production.<t> p WHERE p.nk = <staging key> AND <raw-col tie-break>)`. Two statements: `INSERT INTO waiting.<tbl> SELECT ..., <key>, :wbatch_id FROM staging WHERE collides` (+ **one** `waiting_batch_log` row for the run) → `DELETE FROM staging WHERE collides`; then survivors → production with `nk` populated by the same expression.
 
 ```sql
 -- Generated example (schema_version = 7) — INCREMENTAL production insert step
-INSERT INTO production_erp_transactions (transaction_id, customer_id, amount, transaction_date,
+INSERT INTO production.erp_transactions (transaction_id, customer_id, amount, transaction_date,
                                         status, batch_id, load_date, load_timestamp,
                                         source_system, restated)
 SELECT transaction_id, customer_id, amount, transaction_date,
        UPPER(TRIM(status)), batch_id, load_date, load_timestamp,
        source_system, false
-FROM   staging_erp_transactions;   -- diverted rows already removed above
+FROM   staging.erp_transactions;   -- diverted rows already removed above
 ```
 
 ### 11.4 DDL Builder
 - **Staging** — every source column VARCHAR + metadata (`load_date`, `load_timestamp`, `batch_id`, …); no constraints, no indexes
-- **Production** — target types, `NOT NULL` where registered, `PARTITION BY RANGE(load_date)`, `restated` column; **no row-level UNIQUE** in the base build (added by "Configure" when `natural_key` is set)
-- **`quarantine.<tbl>`** — `LIKE <staging_target> INCLUDING DEFAULTS` + `qbatch_id text NOT NULL`
-- **`waiting.<tbl>`** — `LIKE <production_target> INCLUDING DEFAULTS` + `wbatch_id text NOT NULL`
+- **Production** — target types, `NOT NULL` where registered, `PARTITION BY RANGE(load_date)`, `restated` column; **no row-level UNIQUE** (even with a `natural_key` — see below). When `natural_key` is set: `+ nk bigint` and a **non-unique** btree index `<tbl>_nk_idx` (`ddl.nk_index_ddl`). `nk` is populated by the transform, not `GENERATED`.
+- **`quarantine.<tbl>`** — `LIKE <staging_target> INCLUDING DEFAULTS` + `qbatch_id text NOT NULL` (no `nk` — staging has none)
+- **`waiting.<tbl>`** — `LIKE <production_target> INCLUDING DEFAULTS` + `wbatch_id text NOT NULL`; inherits `nk` from production, gets its own `<tbl>_nk_idx`
 - **`quarantine_batch_log` / `waiting_batch_log`** — fixed shape (Module 4 §4.6–4.7), in `001_core.sql`
 
 ### 11.5 Regeneration Trigger

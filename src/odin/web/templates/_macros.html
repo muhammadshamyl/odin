@@ -55,7 +55,7 @@
 <div class="table-wrap">
 <table class="data">
   <thead><tr><th>Batch</th><th>Source / Table</th><th>Existence value</th>
-    <th>Rows</th><th>Age</th><th></th></tr></thead>
+    <th class="num">Rows</th><th>Age</th><th></th></tr></thead>
   <tbody>
   {% for w in p.entries %}
   <tr>
@@ -99,7 +99,7 @@
 <div class="table-wrap">
 <table class="data">
   <thead><tr><th>Batch</th><th>Source / Table</th><th>Reason</th>
-    <th>Rows</th><th>Age</th><th></th></tr></thead>
+    <th class="num">Rows</th><th>Age</th><th></th></tr></thead>
   <tbody>
   {% for q in p.entries %}
   <tr>
@@ -207,8 +207,8 @@
 <table class="data">
   <thead><tr>
     <th>Run</th><th>Source / Table</th><th>Extract</th><th>Transform</th>
-    <th>→ Staging</th><th>→ Prod</th><th>→ Wait</th><th>Qtn</th>
-    <th>By</th><th>Started</th><th>Dur</th><th>Error</th>
+    <th class="num">→ Staging</th><th class="num">→ Prod</th><th class="num">→ Wait</th><th class="num">Qtn</th>
+    <th>By</th><th>Started</th><th class="num">Dur</th><th>Error</th>
   </tr></thead>
   <tbody>
   {% for r in runs %}

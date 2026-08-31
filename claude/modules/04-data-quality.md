@@ -56,16 +56,21 @@ No period is computed. Rows keep the system `load_date` / `load_timestamp` stamp
 
 **`FULL_SNAPSHOT`**
 1. Ensure the daily partition for this load's `load_date` exists.
-2. `DELETE FROM production_<table> WHERE load_date = :load_date`.
-3. `INSERT INTO production_<table> SELECT ... FROM <staging>`.
+2. `DELETE FROM production.<table> WHERE load_date = :load_date`.
+3. `INSERT INTO production.<table> SELECT ... FROM <staging>`.
 - The existence-check column is irrelevant; nothing goes to the waiting pipeline. Re-running a snapshot for the same `load_date` is idempotent.
 
-**`INCREMENTAL`** — `E` = `existence_check_column`
-1. Colliding values: `SELECT DISTINCT s.E::text, count(*) FROM <staging> s WHERE EXISTS (SELECT 1 FROM production_<table> p WHERE p.E::text = s.E::text) GROUP BY 1`.
+**`INCREMENTAL` with a single `existence_check_column`** — `E` = the column
+1. Colliding values: `SELECT DISTINCT s.E::text, count(*) FROM <staging> s WHERE EXISTS (SELECT 1 FROM production.<table> p WHERE p.E::text = s.E::text) GROUP BY 1`.
 2. For each colliding value: `INSERT INTO waiting.<table> SELECT ..., :wbatch_id FROM <staging> s WHERE s.E::text = :value`, plus one `waiting_batch_log` row (`wbatch_id`, `run_id`, `existence_value`, `row_count`, `status='pending'`). Then delete those rows from staging.
-3. Remaining rows → `production_<table>` (create partitions for each distinct `load_date` present).
-- Existence only — no per-row lookup, no content comparison.
-- Retry safety comes from one-transaction-per-run (§6.5): a failed run rolls back its production writes, so a retry sees the value as absent and inserts cleanly.
+3. Remaining rows → `production.<table>` (create partitions for each distinct `load_date` present).
+
+**`INCREMENTAL` with a composite `natural_key`** (supersedes the single column; `transform._load_incremental_nk`)
+- Production and `waiting.<table>` carry a hashed **`nk bigint`** column (btree-indexed): `hashtextextended(concat_ws(chr(31), coalesce((col::type)::text, chr(1)), …), 0)` — identical expression on staging and production.
+- `collides = EXISTS (SELECT 1 FROM production.<table> p WHERE p.nk = <staging nk> AND <raw-column tie-break>)`. **Two set-based statements, no per-value loop:** all colliding rows → `waiting.<table>` in one INSERT + **one** `waiting_batch_log` row for the run; then `DELETE FROM staging WHERE collides`; survivors → production with `nk` populated.
+- The tie-break (`col::type IS NOT DISTINCT FROM col::type` per key column) runs only on rows already sharing an `nk`, so a 64-bit hash collision cannot mis-route. Key columns cannot be `numeric`/`unit_interval`-typed.
+
+Both paths: existence only — no content comparison. Retry safety comes from one-transaction-per-run (§6.5): a failed run rolls back its production writes, so a retry sees the value / key as absent and inserts cleanly.
 
 ### 4.5 In-load dedup
 - Not handled at the row level in the base build. If two files in the same run carry the same existence value, both sets of rows collide with production (or the first inserts and the second then collides) and route to `waiting`.
@@ -126,8 +131,8 @@ CREATE TABLE waiting_batch_log (
 );
 ```
 
-- The review tool shows the pending batch's `existence_value` and row count, and can preview the waiting rows against production's current rows for that value.
-- **Approve** → `DELETE FROM production_<table> WHERE E = :existence_value`, then insert the waiting rows for that `wbatch_id` with `restated = true`; clear them from `waiting.<…>`; `waiting_batch_log.status = 'approved'`.
+- The review tool shows the pending batch's label and row count, and previews the waiting rows against production's current rows for the same value / key.
+- **Approve** → delete the production rows the batch supersedes — by `E = :existence_value` (single column) or by `p.nk = w.nk AND <tie-break>` (natural key) — then insert the waiting rows for that `wbatch_id` with `restated = true`; clear them from `waiting.<…>`; `waiting_batch_log.status = 'approved'`.
 - **Reject** → delete the rows for that `wbatch_id` from `waiting.<…>`; `status = 'rejected'`. Production keeps what it had.
 - Holds only *unresolved* batches — the permanent record is the append-only source file, which this never touches.
 
@@ -159,7 +164,7 @@ SELECT
     COUNT(*)                                                   AS total_rows,
     COUNT(CASE WHEN TRY_CAST(amount AS DECIMAL(18,2)) IS NULL
                AND amount IS NOT NULL THEN 1 END)              AS would_fail_cast
-FROM production_erp_transactions
+FROM production.erp_transactions
 ```
 
 ### 4.10 Reporting

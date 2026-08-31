@@ -28,15 +28,15 @@ A DE-driven, 7-step flow. Writes to Schema Registry (Module 3), `extraction_cont
 1. **Configure source** — name, type, connection details, owner, table(s) to extract
 2. **Connect & replicate** — system connects, reads the source table structure, auto-infers columns + types, creates the staging (and production) table shells
 3. **Sample load** — extract the **top 1,000 rows** into staging (preview only — nothing reaches production)
-4. **Preview & approve schema** — DE sees the sampled rows, the inferred columns (all VARCHAR for now), and picks the **`load_type`** (`FULL_SNAPSHOT` / `INCREMENTAL`); if INCREMENTAL, the **`existence_check_column`** (a date column). *Optional* "Configure" panel: assign target types + a row-level `natural_key` — deferred, not required.
+4. **Preview & approve schema** — DE sees the sampled rows, the columns, and picks the **`load_type`** (`FULL_SNAPSHOT` / `INCREMENTAL`). If INCREMENTAL: either an **`existence_check_column`** (single date column) **or** a **composite `natural_key`** — as built, three `nk_col` dropdowns (a chosen column greys out in the others; a live chip line shows the resulting key; each option carries its type, synced to the type selects). Per-column target types are set on the same screen.
 5. **Load config** — DE sets `extraction_strategy` (CURSOR / TIME_WINDOW / FULL), the cursor or `window_column` + grain, `settling_lag`, batch-size override
 6. **Recurring or one-time?** — Recurring → set interval (= the TIME_WINDOW size) + start time, writes an ACTIVE `schedule_control` row. One-time → no schedule; optional bounded range to pull; runs once then INACTIVE.
 7. **First real run** — config set: the pipeline runs for real → staging → transform → production; staging truncated after
 
 ### 10.2 Schema Registration / Editing UI
-- Per-table settings: `load_type`, `existence_check_column`, extraction config
-- *"Configure" (optional, deferred):* per-column target types; a row-level `natural_key` that switches routing from load-type to row-level upsert
+- Per-table settings: `load_type`, `existence_check_column` / `natural_key`, per-column types, extraction config
 - Validates duplicates / conflicts before saving; version history per table; diff two versions
+- *As built:* onboarding writes all of it; the table page shows config read-only and can **re-type** production columns in place (`retype_table`). No post-onboard edit form for `load_type` / `natural_key` yet — change = delete + re-onboard.
 
 **As built (Slice 1).** Onboarding writes the registry and creates the four layer
 tables; the table page shows config + columns read-only (no edit form / version

@@ -21,7 +21,7 @@ The Schema Registry is the single source of truth for all structural expectation
 - **Write access: DE role only**, assignable per user (D3.1)
 - **Registration is auto-inferred from the source, then reviewed and approved by DE** before the schema becomes ACTIVE (D3.3)
 - A proposed type change is **verified against current production values** (D3.4)
-- The registry defines each table's **`load_type`** (`FULL_SNAPSHOT` | `INCREMENTAL`) and, for incremental, its **`existence_check_column`** — the DE-chosen date column whose values are checked against production. `natural_key` (row-level upsert) is an optional later "Configure" field.
+- The registry defines each table's **`load_type`** (`FULL_SNAPSHOT` | `INCREMENTAL`) and, for incremental, its **`existence_check_column`** — the DE-chosen date column whose values are checked against production. `natural_key` (composite, ordered comma-list) drives `nk`-hash collision routing when set and supersedes `existence_check_column` — see §3.4a.
 - The registry also holds each table's **extraction strategy** and **load recurrence** (set at onboarding)
 - Every table carries system `load_date` / `load_timestamp` on every row, and is partitioned on `load_date`
 
@@ -134,7 +134,7 @@ CREATE TABLE registry_tables (
     settling_lag_minutes     INTEGER,   -- for TIME_WINDOW; default 0
     load_recurrence          VARCHAR,   -- RECURRING, ONE_TIME
     -- later ("Configure"): row-level keying
-    natural_key              VARCHAR,   -- NULL in the base build; set => row-level upsert instead of period routing
+    natural_key              VARCHAR,   -- comma-separated key columns; when set, INCREMENTAL routing is by hashed nk, not existence_check_column
     status                   VARCHAR,
     last_updated             TIMESTAMP
 )
@@ -178,7 +178,7 @@ CREATE TABLE registry_change_log (
 |--------|---------------------|
 | Module 1 | Reads `extraction_strategy` + cursor/window columns to scope a run; column list feeds the generated query |
 | Module 4 | Check 1 compares file headers against column names; Check 2 uses data types + nullable flags; `load_type` + `existence_check_column` drive collision routing to `waiting.<table>` |
-| Module 6 | Production transform casts to target types, routes by `load_type` / `existence_check_column`, partitions on `load_date`; row-level upsert only if `natural_key` is configured |
+| Module 6 | Production transform casts to target types, routes by `load_type` / `existence_check_column`, partitions on `load_date`; when `natural_key` is set, routing is by hashed `nk` + waiting divert |
 | Module 9 | Schema drift detection compares incoming vs registered |
 | Module 11 | Generates the scoping query, staging/production/quarantine/waiting DDL, and the full transform SQL from the registry; regenerates on verified change |
 
@@ -199,7 +199,7 @@ CREATE TABLE registry_change_log (
 - Write access — DE role only, per-user assignable (D3.1)
 - Registration — auto-infer from source, 1,000-row sample preview, DE approves (D3.3)
 - Type-change verification target — current production values (D3.4)
-- Collision routing is DE-configured: `load_type` (`FULL_SNAPSHOT` | `INCREMENTAL`) + `existence_check_column` (incremental only, exact date value). `natural_key` for row-level upsert is a later "Configure" option (#5 = C)
+- Collision routing is DE-configured: `load_type` (`FULL_SNAPSHOT` | `INCREMENTAL`) + `existence_check_column` (incremental only, exact date value). `natural_key` (composite) supersedes `existence_check_column` when set — built; route is nk-hash + waiting divert, still not an upsert
 - Extraction strategy + recurrence held per table, set at onboarding
 - System `load_date` / `load_timestamp` on every row; production partitioned on `load_date`
 

@@ -39,7 +39,7 @@ SELECT
     AVG(amount)                 AS avg_amount,
     MIN(amount)                 AS min_amount,
     MAX(amount)                 AS max_amount
-FROM production_erp_transactions
+FROM production.erp_transactions
 GROUP BY 1, 2, 3
 ```
 
@@ -58,7 +58,7 @@ SELECT
     c.customer_name,
     c.customer_segment,
     c.region
-FROM production_erp_transactions t
+FROM production.erp_transactions t
 LEFT JOIN production_crm_customers c
     ON t.customer_id = c.customer_id
 ```

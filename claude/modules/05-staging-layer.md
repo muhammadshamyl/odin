@@ -71,7 +71,7 @@ staging_record_id     VARCHAR      -- unique id assigned at load
 ## Staging Table Structure
 
 ```sql
-CREATE TABLE staging_erp_transactions (
+CREATE TABLE staging.erp_transactions (
     -- all source columns as VARCHAR
     transaction_id      VARCHAR,
     customer_id         VARCHAR,
