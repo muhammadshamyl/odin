@@ -627,9 +627,10 @@ form.inline{display:inline-block; margin-right:.5rem}
 #lineage-panel g.wn.s-running rect{stroke-width:2.4; animation:node-glow-info 1.5s var(--ease) infinite}
 #lineage-panel g.qn.s-running .nsub,#lineage-panel g.qn.s-done .nsub{fill:var(--warn); opacity:.8}
 #lineage-panel g.wn.s-running .nsub,#lineage-panel g.wn.s-done .nsub{fill:var(--info); opacity:.8}
-#lineage-panel .div.q.live,#lineage-panel .div.w.live{stroke-width:2.6; animation:dash .7s linear infinite}
-#lineage-panel .div.q.live{filter:drop-shadow(0 0 3px var(--warn)) drop-shadow(0 0 7px color-mix(in srgb,var(--warn) 55%,transparent))}
-#lineage-panel .div.w.live{filter:drop-shadow(0 0 3px var(--info)) drop-shadow(0 0 7px color-mix(in srgb,var(--info) 55%,transparent))}
+/* connector to a populated diversion box — a static highlight, no motion */
+#lineage-panel .div.q.live,#lineage-panel .div.w.live{stroke-width:2.4; opacity:1}
+#lineage-panel .div.q.live{stroke:var(--warn); filter:drop-shadow(0 0 4px color-mix(in srgb,var(--warn) 45%,transparent))}
+#lineage-panel .div.w.live{stroke:var(--info); filter:drop-shadow(0 0 4px color-mix(in srgb,var(--info) 45%,transparent))}
 
 @keyframes node-glow-warn{
   0%,100%{filter:drop-shadow(0 0 2px var(--warn)); stroke-opacity:.75}

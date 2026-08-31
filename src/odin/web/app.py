@@ -224,13 +224,13 @@ def _recent_runs(source_id: str | None = None, table_name: str | None = None,
 
 
 def _pipeline_stage_state(source_id: str, table: str, *,
-                          waiting_open: int = 0, quarantine_open: int = 0) -> dict:
+                          waiting_rows: int = 0, quarantine_rows: int = 0) -> dict:
     """Per-node state for the animated lineage on the table page: where is the
     most recent run right now? Node values: 'running' | 'done' | 'failed' | None.
     Falls back to live jobs for the beat before the first run_log row lands.
-    The waiting / quarantine diversions glow while a transform runs (rows may be
-    routing there) and settle to 'done' when the batch table actually holds
-    something, else idle."""
+    The waiting / quarantine diversions light up **only** once a row has actually
+    landed there (held rows now, or routed on the last run) — never just because
+    a transform is running."""
     runs = _recent_runs(source_id, table, 1)
     r0 = runs[0] if runs else {}
     ex = r0.get("extract_state")
@@ -255,10 +255,8 @@ def _pipeline_stage_state(source_id: str, table: str, *,
         "staging": "done" if ex == "done" else ("running" if ex == "running" else None),
         "transform": tr,
         "production": "done" if tr == "done" else ("running" if tr == "running" else None),
-        "waiting": "running" if tr == "running"
-                   else ("done" if (waiting_open or to_waiting) else None),
-        "quarantine": "running" if tr == "running"
-                      else ("done" if (quarantine_open or to_quarantined) else None),
+        "waiting": "done" if (waiting_rows or to_waiting) else None,
+        "quarantine": "done" if (quarantine_rows or to_quarantined) else None,
     }
 
 
@@ -530,6 +528,8 @@ def table_detail(request: Request, source_id: str, table: str):
     live = any(j.source_id == source_id and j.table_name == table
                for j in jobs.active())
     col_meta = registry.get_columns_meta(source_id, table)
+    waiting_rows = _count_safe(cfg.waiting_target) or 0
+    quarantine_rows = _count_safe(cfg.quarantine_target) or 0
     return _render(request, "table.html",
                    cfg=cfg, columns=[c["column_name"] for c in col_meta],
                    cast_labels=casts.LABELS,
@@ -540,14 +540,14 @@ def table_detail(request: Request, source_id: str, table: str):
                    quarantine=resolve.open_quarantine(source_id, table, limit=8),
                    waiting_count=resolve.count_pending_waiting(source_id, table),
                    quarantine_count=resolve.count_open_quarantine(source_id, table),
+                   waiting_rows=waiting_rows, quarantine_rows=quarantine_rows,
                    prod_count=_count_safe(cfg.production_target),
                    staging_count=_count_safe(cfg.staging_target),
                    dereg=registry.deregister_plan(source_id, table),
                    panel_url=_panel_url(source_id, table),
                    state=_pipeline_stage_state(
                        source_id, table,
-                       waiting_open=resolve.count_pending_waiting(source_id, table),
-                       quarantine_open=resolve.count_open_quarantine(source_id, table),
+                       waiting_rows=waiting_rows, quarantine_rows=quarantine_rows,
                    ), polling=live)
 
 
@@ -561,12 +561,15 @@ def partial_lineage(request: Request, source_id: str, table: str):
                for j in jobs.active())
     waiting = resolve.pending_waiting(source_id, table)
     quarantine = resolve.open_quarantine(source_id, table)
+    waiting_rows = _count_safe(cfg.waiting_target) or 0
+    quarantine_rows = _count_safe(cfg.quarantine_target) or 0
     return _render(request, "_lineage.html", cfg=cfg,
                    state=_pipeline_stage_state(
                        source_id, table,
-                       waiting_open=len(waiting), quarantine_open=len(quarantine),
+                       waiting_rows=waiting_rows, quarantine_rows=quarantine_rows,
                    ),
                    waiting=waiting, quarantine=quarantine,
+                   waiting_rows=waiting_rows, quarantine_rows=quarantine_rows,
                    staging_count=_count_safe(cfg.staging_target),
                    prod_count=_count_safe(cfg.production_target),
                    polling=live)
@@ -585,8 +588,8 @@ def partial_stats(request: Request, source_id: str, table: str):
     return _render(request, "_data_stats.html", cfg=cfg,
                    staging_count=_count_safe(cfg.staging_target),
                    prod_count=_count_safe(cfg.production_target),
-                   waiting_count=resolve.count_pending_waiting(source_id, table),
-                   quarantine_count=resolve.count_open_quarantine(source_id, table),
+                   waiting_rows=_count_safe(cfg.waiting_target) or 0,
+                   quarantine_rows=_count_safe(cfg.quarantine_target) or 0,
                    polling=live)
 
 
@@ -613,11 +616,12 @@ def table_transform(request: Request, source_id: str, table: str):
 @app.post("/t/{source_id}/{table}/load", response_class=HTMLResponse)
 def table_load(request: Request, source_id: str, table: str,
                file: UploadFile | None = File(None),
-               saved: str = Form(""), flush: str = Form("")):
+               saved: str = Form(""), flush: str = Form(""), discard: str = Form("")):
     """The primary "get this file into production" action: one `ingest` job that
     extracts to staging then transforms into production under one run_id. If
-    staging still holds un-transformed rows, ask first — then (flush=1) drain
-    them with a transform before loading the new file (single worker ⇒ ordered)."""
+    staging still holds un-transformed rows, ask first — then either drain them
+    with a transform (`flush=1`) or `TRUNCATE` them away (`discard=1`) before
+    loading the new file (single worker ⇒ ordered)."""
     try:
         cfg = registry.get_table(source_id, table)
     except registry.RegistryError:
@@ -639,11 +643,16 @@ def table_load(request: Request, source_id: str, table: str,
         return HTMLResponse("", headers=_hx("no file selected", "err"))
 
     staged = _count_safe(cfg.staging_target) or 0
-    if staged and flush != "1":
+    if staged and flush != "1" and discard != "1":
         return _render(request, "_load_confirm.html",
                        cfg=cfg, staging_count=staged, saved=path.name, filename=original)
 
-    if staged:  # flush == "1"
+    if staged and discard == "1":
+        with connection() as conn, conn.cursor() as cur:
+            cur.execute(sql.SQL("TRUNCATE {}").format(qname(cfg.staging_target)))
+        jobs.submit("ingest", source_id, table, file=str(path))
+        msg = f"Discarded {staged:,} staged row(s); loading {original} → production"
+    elif staged:  # flush == "1"
         jobs.submit("transform", source_id, table)
         jobs.submit("ingest", source_id, table, file=str(path))
         msg = f"Flushing {staged:,} staged row(s) to production, then loading {original}"

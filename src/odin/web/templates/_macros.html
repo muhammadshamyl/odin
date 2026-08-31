@@ -162,14 +162,14 @@
     <div class="s-h">Production now</div>
     {% for m in compare.metrics %}
     <div class="drow{{ ' chg' if m.changed }}"><span>{{ m.label }}</span>
-      <span>{{ "{:,}".format(m.production) if m.production is not none else "—" }}</span></div>
+      <span{% if m.production is not none %} title="{{ "{:,}".format(m.production) }}"{% endif %}>{{ (m.production | compact) if (m.compact and m.production is not none) else ("{:,}".format(m.production) if m.production is not none else "—") }}</span></div>
     {% endfor %}
   </div>
   <div class="side">
     <div class="s-h incoming">Incoming (held)</div>
     {% for m in compare.metrics %}
     <div class="drow{{ ' chg' if m.changed }}"><span>{{ m.label }}</span>
-      <span>{{ "{:,}".format(m.incoming) if m.incoming is not none else "—" }}</span></div>
+      <span{% if m.incoming is not none %} title="{{ "{:,}".format(m.incoming) }}"{% endif %}>{{ (m.incoming | compact) if (m.compact and m.incoming is not none) else ("{:,}".format(m.incoming) if m.incoming is not none else "—") }}</span></div>
     {% endfor %}
   </div>
 </div>

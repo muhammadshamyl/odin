@@ -238,11 +238,12 @@ def waiting_compare(wbatch_id: str) -> dict:
         )
         inc = cur.fetchone()
 
-    def _row(label: str, key: str) -> dict:
+    def _row(label: str, key: str, *, compact: bool = False) -> dict:
         p, i = prod.get(key), inc.get(key)
-        return {"label": label, "production": p, "incoming": i, "changed": p != i}
+        return {"label": label, "production": p, "incoming": i,
+                "changed": p != i, "compact": compact}
 
-    metrics = [_row("rows", "r_rows")]
+    metrics = [_row("rows", "r_rows", compact=True)]
     for c in num_cols:
         metrics += [_row(f"sum({c})", f"sum_{c}"),
                     _row(f"min({c})", f"min_{c}"),

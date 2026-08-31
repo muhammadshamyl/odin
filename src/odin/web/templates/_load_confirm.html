@@ -3,14 +3,24 @@
     <span class="mono">{{ cfg.staging_target }}</span> from an earlier load that never reached production.</p>
   <p class="hint" style="margin:.4rem 0 .8rem">
     <b>Flush &amp; load</b> transforms those rows into <span class="mono">{{ cfg.production_target }}</span>
-    and clears staging, then loads <span class="mono">{{ filename }}</span> the same way — two runs, back to back.
+    and clears staging, then loads <span class="mono">{{ filename }}</span> — two runs, back to back.
+    <b>Discard &amp; load</b> throws the staged rows away (<span class="mono">TRUNCATE</span>) and loads
+    <span class="mono">{{ filename }}</span> on a clean staging table. <b>Cancel</b> leaves staging untouched.
   </p>
-  <div class="btn-row">
+  <div class="btn-row" style="gap:8px; flex-wrap:wrap">
     <button class="btn primary"
             hx-post="/t/{{ cfg.source_id }}/{{ cfg.table_name }}/load"
             hx-vals='{"saved": "{{ saved }}", "flush": "1"}'
             hx-target="#load-slot" hx-swap="innerHTML">
       <span class="spin"></span>Flush &amp; load
+    </button>
+    <button class="btn danger"
+            hx-post="/t/{{ cfg.source_id }}/{{ cfg.table_name }}/load"
+            hx-vals='{"saved": "{{ saved }}", "discard": "1"}'
+            hx-target="#load-slot" hx-swap="innerHTML"
+            hx-confirm="Discard the {{ "{:,}".format(staging_count) }} staged row(s) permanently and load {{ filename }} on a clean staging table?"
+            data-confirm-label="Discard &amp; load">
+      <span class="spin"></span>Discard &amp; load
     </button>
     <button class="btn ghost" type="button"
             onclick="this.closest('#load-slot').innerHTML = ''">Cancel</button>

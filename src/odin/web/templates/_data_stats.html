@@ -7,6 +7,6 @@
      hx-trigger="odin:runs-changed from:body{% if polling %}, every 4s{% endif %}">
   <div class="stat"><span class="l">staging rows</span><div class="n tnum" {% if staging_count is not none %}title="{{ "{:,}".format(staging_count) }}"{% endif %}>{{ (staging_count | compact) if staging_count is not none else "—" }}</div></div>
   <div class="stat"><span class="l">production rows</span><div class="n tnum" {% if prod_count is not none %}title="{{ "{:,}".format(prod_count) }}"{% endif %}>{{ (prod_count | compact) if prod_count is not none else "—" }}</div></div>
-  <div class="stat"><span class="l">waiting</span><div class="n tnum" title="{{ "{:,}".format(waiting_count) }}">{{ waiting_count | compact }}</div></div>
-  <div class="stat"><span class="l">quarantine</span><div class="n tnum" title="{{ "{:,}".format(quarantine_count) }}">{{ quarantine_count | compact }}</div></div>
+  <div class="stat"><span class="l">waiting rows</span><div class="n tnum" title="{{ "{:,}".format(waiting_rows) }}">{{ waiting_rows | compact }}</div></div>
+  <div class="stat"><span class="l">quarantine rows</span><div class="n tnum" title="{{ "{:,}".format(quarantine_rows) }}">{{ quarantine_rows | compact }}</div></div>
 </div>
