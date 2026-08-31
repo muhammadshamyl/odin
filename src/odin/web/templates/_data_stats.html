@@ -3,7 +3,7 @@
    so the KPI cards update after an extract / transform / load without a page reload. #}
 <div id="data-stats" class="stat-row"
      hx-get="/partials/stats/{{ cfg.source_id }}/{{ cfg.table_name }}"
-     hx-swap="outerHTML"
+     hx-swap="morph:outerHTML"
      hx-trigger="odin:runs-changed from:body{% if polling %}, every 4s{% endif %}">
   <div class="stat"><span class="l">staging rows</span><div class="n tnum" {% if staging_count is not none %}title="{{ "{:,}".format(staging_count) }}"{% endif %}>{{ (staging_count | compact) if staging_count is not none else "—" }}</div></div>
   <div class="stat"><span class="l">production rows</span><div class="n tnum" {% if prod_count is not none %}title="{{ "{:,}".format(prod_count) }}"{% endif %}>{{ (prod_count | compact) if prod_count is not none else "—" }}</div></div>

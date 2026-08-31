@@ -1,7 +1,7 @@
 {% from "_macros.html" import runs_table %}
 <div id="runs-panel" data-runs-panel
-     hx-get="{{ poll_url }}" hx-swap="outerHTML"
-     hx-trigger="odin:runs-changed from:body{% if polling %}, every 3s{% endif %}">
+     hx-get="{{ poll_url }}" hx-swap="morph:outerHTML"
+     hx-trigger="odin:runs-changed from:body{% if polling %}, every 4s{% endif %}">
   {% if failed_jobs is defined and failed_jobs %}
   <div class="jobs-strip">
     {% for j in failed_jobs %}

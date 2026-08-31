@@ -4,7 +4,7 @@
    Refreshes on the same `odin:runs-changed` body event the runs panel listens for. #}
 <div id="lineage-panel"
      hx-get="/partials/lineage/{{ cfg.source_id }}/{{ cfg.table_name }}"
-     hx-swap="outerHTML"
+     hx-swap="morph:outerHTML"
      hx-trigger="odin:runs-changed from:body{% if polling %}, every 4s{% endif %}">
   <svg class="lineage" viewBox="0 0 960 210" role="img"
        aria-label="Pipeline lineage, current stage highlighted">
