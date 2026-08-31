@@ -25,7 +25,7 @@
     <g class="lg s-{{ state.staging or 'idle' }}">
       <rect class="node" x="402" y="38" width="124" height="44" rx="4"/>
       <text class="nlabel" x="464" y="58" text-anchor="middle">Staging</text>
-      <text class="nsub" x="464" y="72" text-anchor="middle">{{ "{:,} rows".format(staging_count) if staging_count is not none else "VARCHAR buffer" }}</text>
+      <text class="nsub" x="464" y="72" text-anchor="middle">{{ (staging_count | compact) ~ " rows" if staging_count is not none else "VARCHAR buffer" }}</text>
     </g>
     <g class="lg s-{{ state.transform or 'idle' }}">
       <rect class="proc" x="590" y="42" width="124" height="36" rx="4"/>
@@ -34,7 +34,7 @@
     <g class="lg s-{{ state.production or 'idle' }}">
       <rect class="node prod" x="778" y="38" width="124" height="44" rx="4"/>
       <text class="nlabel" x="840" y="58" text-anchor="middle" style="fill:var(--accent)">Production</text>
-      <text class="nsub" x="840" y="72" text-anchor="middle">{{ "{:,} rows".format(prod_count) if prod_count is not none else "partition · load_date" }}</text>
+      <text class="nsub" x="840" y="72" text-anchor="middle">{{ (prod_count | compact) ~ " rows" if prod_count is not none else "partition · load_date" }}</text>
     </g>
 
     <path class="div" style="stroke:var(--text-faint)" d="M840 82 V128"/>

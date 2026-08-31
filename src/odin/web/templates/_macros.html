@@ -1,7 +1,7 @@
 {% macro numcell(v) -%}
   {%- if v is none -%}<span class="num muted">—</span>
   {%- elif v == 0 -%}<span class="num zero">0</span>
-  {%- else -%}<span class="num pos">{{ "{:,}".format(v) }}</span>{%- endif -%}
+  {%- else -%}<span class="num pos" title="{{ "{:,}".format(v) }}">{{ v | compact }}</span>{%- endif -%}
 {%- endmacro %}
 
 {% macro status_badge(s) -%}

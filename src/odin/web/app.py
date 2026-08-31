@@ -34,6 +34,32 @@ _HERE = Path(__file__).parent
 _TEMPLATES = Jinja2Templates(directory=str(_HERE / "templates"))
 
 
+def _compact(n) -> str:
+    """Row count for a card: 999 -> "999", 1000 -> "1k", 1234 -> "1.23k",
+    2_500_000 -> "2.5M" (up to 2 decimals, trailing zeros trimmed). Non-numbers
+    pass straight through (so "—" / None-guards still work)."""
+    try:
+        x = float(n)
+    except (TypeError, ValueError):
+        return n
+    if x != x:  # NaN
+        return "—"
+    a = abs(x)
+    if a < 1000:
+        return str(int(x))
+    units = ((1e12, "T"), (1e9, "B"), (1e6, "M"), (1e3, "k"))
+    for i, (div, suf) in enumerate(units):
+        if a >= div:
+            s = f"{a / div:.2f}".rstrip("0").rstrip(".")
+            if s == "1000" and i > 0:              # rounded up into the next unit
+                div, suf, s = *units[i - 1][:2], "1"
+            return ("-" if x < 0 else "") + s + suf
+    return str(int(x))
+
+
+_TEMPLATES.env.filters["compact"] = _compact
+
+
 def _reconcile_stale_runs() -> None:
     """A `run_log` row still 'running' at startup can't actually be running — the
     process that owned it is gone (crash, or `uvicorn --reload` restart). Mark it

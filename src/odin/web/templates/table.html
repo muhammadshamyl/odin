@@ -108,11 +108,11 @@
       <a class="btn sm ghost" href="/waiting?source={{ cfg.source_id }}&table={{ cfg.table_name }}">Open →</a></div>
     {% if waiting %}
     <div class="table-wrap"><table class="data">
-      <thead><tr><th>Batch</th><th>Existence value</th><th>Rows</th><th></th></tr></thead>
+      <thead><tr><th>Batch</th><th>Existence value</th><th class="num">Rows</th><th></th></tr></thead>
       <tbody>{% for w in waiting %}
       <tr><td class="m" data-label="Batch">{{ w.wbatch_id[:8] }}</td>
           <td data-label="Existence value"><span class="badge info">{{ w.existence_value }}</span></td>
-          <td class="num" data-label="Rows">{{ "{:,}".format(w.row_count) }}</td>
+          <td class="num" data-label="Rows"><span title="{{ "{:,}".format(w.row_count) }}">{{ w.row_count | compact }}</span></td>
           <td data-label=""><a class="btn sm ghost" href="/waiting/{{ w.wbatch_id }}">Review</a></td></tr>
       {% endfor %}</tbody>
     </table></div>
@@ -126,11 +126,11 @@
       <a class="btn sm ghost" href="/quarantine?source={{ cfg.source_id }}&table={{ cfg.table_name }}">Open →</a></div>
     {% if quarantine %}
     <div class="table-wrap"><table class="data">
-      <thead><tr><th>Batch</th><th>Reason</th><th>Rows</th><th></th></tr></thead>
+      <thead><tr><th>Batch</th><th>Reason</th><th class="num">Rows</th><th></th></tr></thead>
       <tbody>{% for q in quarantine %}
       <tr><td class="m" data-label="Batch">{{ q.qbatch_id[:8] }}</td>
           <td data-label="Reason"><span class="badge warn">{{ q.reason }}</span></td>
-          <td class="num" data-label="Rows">{{ "{:,}".format(q.row_count) }}</td>
+          <td class="num" data-label="Rows"><span title="{{ "{:,}".format(q.row_count) }}">{{ q.row_count | compact }}</span></td>
           <td data-label=""><a class="btn sm ghost" href="/quarantine/{{ q.qbatch_id }}">Review</a></td></tr>
       {% endfor %}</tbody>
     </table></div>

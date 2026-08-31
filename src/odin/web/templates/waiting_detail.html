@@ -22,7 +22,7 @@
       <dl class="kv" style="margin-bottom:14px">
         <dt>Source / table</dt><dd><b>{{ wb.source_id }} / {{ wb.table_name }}</b></dd>
         <dt>Existence value</dt><dd><b style="color:var(--info)">{{ wb.existence_value }}</b></dd>
-        <dt>Rows in batch</dt><dd>{{ "{:,}".format(wb.row_count) }}</dd>
+        <dt>Rows in batch</dt><dd><span title="{{ "{:,}".format(wb.row_count) }}">{{ wb.row_count | compact }}</span></dd>
         {% if wb.run_id %}<dt>Raised by run</dt><dd class="mono">{{ wb.run_id[:8] }}</dd>{% endif %}
         <dt>Age</dt><dd><time class="reltime" datetime="{{ wb.created_at.isoformat() }}">{{ wb.created_at }}</time></dd>
         {% if wb.resolved_by %}<dt>Resolved by</dt><dd>{{ wb.resolved_by }}</dd>{% endif %}

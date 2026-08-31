@@ -39,7 +39,7 @@
 <div class="grid g-4" style="margin-bottom:16px">
   <div class="panel kpi">
     <div class="k-top"><span class="mlabel">Rows → production</span><span class="sdot ok"></span></div>
-    <div class="k-val tnum">{{ "{:,}".format(k.prod_24h) }} <small>/ 24h</small></div>
+    <div class="k-val tnum" title="{{ "{:,}".format(k.prod_24h) }} rows in the last 24h">{{ k.prod_24h | compact }} <small>/ 24h</small></div>
     <span class="spark" data-hue="ok" data-pts="{{ deck.spark.prod }}"></span>
     {% if k.prod_delta_pct is none %}
       <span class="k-delta flat">no prior-24h baseline yet</span>
