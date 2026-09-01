@@ -362,25 +362,34 @@ def extract_to_csv(src: dict, cols: list[str], dest_path, *,
 
     dest_path = Path(dest_path)
     n = 0
+    # One dedicated source connection for the whole pull: opened here, streamed
+    # through a server-side cursor, then closed in every path (the `with` block
+    # closes it on normal exit and on error). Nothing to the source is left open
+    # after this returns.
     try:
-        conn = psycopg.connect(p._dsn())          # not autocommit — server-side cursor
+        with psycopg.connect(p._dsn()) as conn:      # not autocommit — server-side cursor
+            with conn.cursor(name=f"odin_x_{uuid.uuid4().hex[:12]}") as cur:
+                cur.itersize = settings.rdbms_batch_rows
+                cur.execute(stmt, params)
+                with dest_path.open("w", newline="") as fh:
+                    w = csv.writer(fh)
+                    w.writerow(cols)
+                    for row in cur:
+                        w.writerow([_csv_cell(v) for v in row])
+                        n += 1
+            conn.rollback()                           # read-only: never leave a txn behind
     except (psycopg.Error, OSError) as exc:
         raise RdbmsError(_clean_err(exc)) from exc
+
+    # Pull succeeded — note it against the stored connection (health signal).
     try:
-        with conn.cursor(name=f"odin_x_{uuid.uuid4().hex[:12]}") as cur:
-            cur.itersize = settings.rdbms_batch_rows
-            cur.execute(stmt, params)
-            with dest_path.open("w", newline="") as fh:
-                w = csv.writer(fh)
-                w.writerow(cols)
-                for row in cur:
-                    w.writerow([_csv_cell(v) for v in row])
-                    n += 1
-        conn.rollback()
-    except (psycopg.Error, OSError) as exc:
-        raise RdbmsError(_clean_err(exc)) from exc
-    finally:
-        conn.close()
+        with connection() as c, c.cursor() as cur:
+            cur.execute(
+                "UPDATE secret.rdbms_connection SET last_ok_at = now() WHERE connection_id = %s",
+                (src["connection_id"],),
+            )
+    except Exception:  # noqa: BLE001 - health stamp is best-effort, never fails a pull
+        pass
     return n
 
 

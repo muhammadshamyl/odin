@@ -108,7 +108,8 @@
     <input name="owner">
 
     <label class="nolabel" style="display:flex; align-items:center; gap:.5rem; margin:1rem 0 0; font-size:12px; color:var(--text-soft); text-transform:none; letter-spacing:0; font-family:var(--font)">
-      <input type="checkbox" name="run_now" value="1"> extract &amp; transform this uploaded file now
+      <input type="checkbox" name="run_now" value="1">
+      {% if rdbms %}pull {{ rdbms.schema }}.{{ rdbms.table }} &amp; transform into production now{% else %}extract &amp; transform this uploaded file now{% endif %}
     </label>
 
     <div class="btn-row" style="margin-top:1.2rem">

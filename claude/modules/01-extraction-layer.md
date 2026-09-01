@@ -76,6 +76,24 @@ The DE picks one per table at onboarding (stored in `registry_tables.extraction_
 - The scoping query (CURSOR / TIME_WINDOW / FULL) is generated from the registry by Module 11
 - **Standalone CSV/TXT sources are handled here** — already in output format, they skip the query and go straight to the shared tail
 
+**As built (Slice 2, PostgreSQL only) — `connectors/rdbms.py` + `extract.run_extract_rdbms`:**
+- **Connection lifecycle.** Introspection calls (schema list, FK graph, columns, peek,
+  sample) each open a short-lived source connection and close it on return. The data
+  pull (`extract_to_csv`) opens **one** dedicated source connection at the start, streams
+  the whole result through a server-side named cursor, and closes it on every exit path
+  (success or error) — nothing to the source is left open after a run. A successful pull
+  stamps `secret.rdbms_connection.last_ok_at`.
+- **Run modes.** Every manual run is **Full** (whole table within the static filter) or
+  **Tenure** (a `[from, to]` window on the pipeline's `tenure_column`). Scheduled runs
+  (Module 8, not yet built) will use a preset tenure.
+- **Drain before pull.** A healthy transform always leaves staging empty (bad rows to
+  `quarantine`, good rows to `production`). If a prior run died mid-transform and rows
+  are still in staging, the `ingest_rdbms` job runs the transform to drain them **before**
+  it pulls, so a fresh batch never COPYs on top of a half-loaded one; if that drain fails,
+  no pull happens.
+- **First run.** The onboarding "run now" checkbox starts the first pull immediately
+  (`triggered_by="onboarding"`); otherwise the DE runs it from the pipeline page.
+
 ### 1.6 NoSQL Connector
 - MongoDB and similar document stores; REST / streaming sources
 - Extracts in batches and flattens to flat-file shape before landing

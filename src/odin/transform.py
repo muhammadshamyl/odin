@@ -123,6 +123,16 @@ def _distinct_load_dates(cur, staging: str) -> list:
     return [r["load_date"] for r in cur.fetchall()]
 
 
+def staging_count(source_id: str, table_name: str) -> int:
+    """Rows currently sitting in this table's staging buffer. A healthy run ends
+    with staging empty (bad rows to quarantine, good rows to production); a
+    non-zero count means a prior run died mid-transform."""
+    cfg = registry.get_table(source_id, table_name)
+    with connection() as conn, conn.cursor() as cur:
+        cur.execute(sql.SQL("SELECT count(*) AS n FROM {}").format(qname(cfg.staging_target)))
+        return cur.fetchone()["n"]
+
+
 def run_transform(
     source_id: str, table_name: str, *, run_id: str | None = None, triggered_by: str = "manual"
 ) -> dict:

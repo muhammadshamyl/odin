@@ -506,7 +506,7 @@ async def onboard_create(
             request, name=name, table=table, load_type=load_type,
             existence_column=existence_column, recurrence=recurrence, owner=owner,
             cid=rdbms_cid, schema=rdbms_schema, src_table=rdbms_table,
-            tenure=rdbms_tenure, static_filter=sf,
+            tenure=rdbms_tenure, static_filter=sf, run_now=bool(run_now),
         )
 
     path = settings.upload_dir / f
@@ -539,7 +539,7 @@ async def onboard_create(
 
 async def _onboard_create_rdbms(request, *, name, table, load_type, existence_column,
                                 recurrence, owner, cid, schema, src_table, tenure,
-                                static_filter):
+                                static_filter, run_now=False):
     if rdbms.connection_meta(cid) is None:
         return _redirect("/onboard", msg="error: that connection expired — reconnect")
     try:
@@ -570,8 +570,12 @@ async def _onboard_create_rdbms(request, *, name, table, load_type, existence_co
                        rdbms={"cid": cid, "schema": schema, "table": src_table,
                               "tenure": tenure, "filter": static_filter})
 
-    return _redirect(f"/t/{cfg.source_id}/{cfg.table_name}",
-                     msg="RDBMS pipeline created — the extract runner lands in phase 4")
+    dest = f"/t/{cfg.source_id}/{cfg.table_name}"
+    if run_now:
+        jobs.submit("ingest_rdbms", cfg.source_id, cfg.table_name,
+                    triggered_by="onboarding")
+        return _redirect(dest, msg="RDBMS pipeline created — first pull started")
+    return _redirect(dest, msg="RDBMS pipeline created — run the first pull from the pipeline page")
 
 
 # --------------------------------------------------------------------------- #
@@ -846,6 +850,10 @@ def table_run_rdbms(request: Request, source_id: str, table: str,
     """Run an RDBMS pipeline: pull → CSV → load → transform. `mode=full` pulls
     the whole table (within any static filter); `mode=tenure` windows the
     tenure column between `tfrom` and `tto`."""
+    try:
+        cfg = registry.get_table(source_id, table)
+    except registry.RegistryError:
+        return HTMLResponse("", headers=_hx(f"{source_id}.{table} is not registered", "err"))
     src = registry.get_rdbms_source(source_id, table)
     if src is None:
         return HTMLResponse("", headers=_hx(f"{source_id}.{table} is not an RDBMS pipeline", "err"))
@@ -860,10 +868,16 @@ def table_run_rdbms(request: Request, source_id: str, table: str,
         if not tenure_from and not tenure_to:
             return HTMLResponse("", headers=_hx("give a from and/or to date for a tenure run", "err"))
 
+    # A healthy transform always empties staging (bad rows -> quarantine). If rows
+    # are still there a previous run died mid-transform; the ingest_rdbms job
+    # drains them (transform) before it pulls, so the new batch never lands on
+    # top of a half-loaded one. Surface that in the toast.
+    staged = _count_safe(cfg.staging_target) or 0
     jobs.submit("ingest_rdbms", source_id, table, triggered_by="manual",
                 tenure_from=tenure_from, tenure_to=tenure_to)
     span = (f"{tenure_from or '…'} → {tenure_to or '…'}" if mode == "tenure" else "full table")
-    return HTMLResponse("", headers=_hx(f"Pull queued ({span}) — progress shows in Runs",
+    lead = f"Draining {staged:,} staged row(s), then pulling" if staged else "Pull queued"
+    return HTMLResponse("", headers=_hx(f"{lead} ({span}) — progress shows in Runs",
                                         "ok", **{"odin:runs-changed": True}))
 
 

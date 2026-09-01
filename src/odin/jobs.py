@@ -111,6 +111,14 @@ def _run(job_id: str) -> None:
                 job.source_id, job.table_name, triggered_by=job.triggered_by
             )
         elif job.kind == "ingest_rdbms":  # pull -> CSV -> load -> transform, ONE run_id
+            # Drain a staging buffer left behind by a prior failed transform
+            # (bad rows -> quarantine, good -> production, staging truncated)
+            # BEFORE pulling, so a fresh batch never COPYs on top of it. If the
+            # drain itself fails, this raises and no pull happens.
+            if transform.staging_count(job.source_id, job.table_name):
+                transform.run_transform(
+                    job.source_id, job.table_name, triggered_by=job.triggered_by
+                )
             run_id = runlog.new_run_id()
             ex = extract.run_extract_rdbms(
                 job.source_id, job.table_name,
