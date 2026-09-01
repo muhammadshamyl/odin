@@ -233,6 +233,91 @@ def columns(connection_id: str, schema: str, table: str) -> list[dict]:
         raise RdbmsError(_clean_err(exc)) from exc
 
 
+# --------------------------------------------------------------------------- #
+# type mapping + typed sample + static filter (phase 3)
+# --------------------------------------------------------------------------- #
+
+# information_schema.columns.data_type  ->  odin cast token
+_PG_TOKEN = {
+    "smallint": "int", "integer": "int",
+    "bigint": "bigint",
+    "numeric": "numeric", "decimal": "numeric",
+    "real": "numeric", "double precision": "numeric",
+    "boolean": "boolean",
+    "date": "date",
+    "timestamp without time zone": "timestamptz",
+    "timestamp with time zone": "timestamptz",
+    "time without time zone": "timestamptz",
+    "time with time zone": "timestamptz",
+}
+
+
+def token_for(pg_data_type: str) -> str:
+    """Odin production cast token for a Postgres ``information_schema`` type.
+    Anything not explicitly numeric / temporal / boolean lands as ``text``."""
+    return _PG_TOKEN.get((pg_data_type or "").lower(), "text")
+
+
+def date_columns(connection_id: str, schema: str, table: str) -> list[str]:
+    return [c["name"] for c in columns(connection_id, schema, table)
+            if token_for(c["data_type"]) in ("date", "timestamptz")]
+
+
+def _static_where(flt: dict | None):
+    """Build ``(sql, params)`` for an optional ``{column, pg_type, from, to}``
+    range filter, or ``(None, [])``. Bounds are inclusive; either side may be
+    blank. The column is cast to ``pg_type`` so text bounds compare typed."""
+    if not flt:
+        return None, []
+    col = flt.get("column")
+    if not col:
+        return None, []
+    pg = flt.get("pg_type") or "text"
+    lo, hi = (flt.get("from") or "").strip(), (flt.get("to") or "").strip()
+    if not lo and not hi:
+        return None, []
+    ref = _sql.SQL("{}::{}").format(_sql.Identifier(col), _sql.SQL(pg))
+    parts, params = [], []
+    if lo:
+        parts.append(_sql.SQL("{} >= %s::{}").format(ref, _sql.SQL(pg)))
+        params.append(lo)
+    if hi:
+        parts.append(_sql.SQL("{} <= %s::{}").format(ref, _sql.SQL(pg)))
+        params.append(hi)
+    return _sql.SQL(" AND ").join(parts), params
+
+
+def sample_rows(connection_id: str, schema: str, table: str, *,
+                limit: int = 200, static_filter: dict | None = None):
+    """``(header, rows)`` where ``header`` is the column-name list and ``rows`` is
+    a list of dicts keyed by name — the shape ``preview.html`` expects. The
+    static range filter, if any, is applied."""
+    cols = [c["name"] for c in columns(connection_id, schema, table)]
+    where, params = _static_where(static_filter)
+    stmt = _sql.SQL("SELECT * FROM {}.{}").format(
+        _sql.Identifier(schema), _sql.Identifier(table))
+    if where is not None:
+        stmt = stmt + _sql.SQL(" WHERE ") + where
+    stmt = stmt + _sql.SQL(" LIMIT {}").format(_sql.Literal(int(limit)))
+    try:
+        with _source_conn(connection_id) as conn, conn.cursor() as cur:
+            cur.execute(stmt, params)
+            names = [d.name for d in cur.description]
+            rows = [
+                {n: ("" if v is None else str(v)) for n, v in zip(names, row)}
+                for row in cur.fetchall()
+            ]
+    except (psycopg.Error, OSError) as exc:
+        raise RdbmsError(_clean_err(exc)) from exc
+    return (cols, rows)
+
+
+def column_tokens(connection_id: str, schema: str, table: str) -> dict[str, str]:
+    """``{column: cast_token}`` pre-filled from the source schema."""
+    return {c["name"]: token_for(c["data_type"])
+            for c in columns(connection_id, schema, table)}
+
+
 def peek(connection_id: str, schema: str, table: str, *, limit: int = 20) -> dict:
     """``{columns: [{name, data_type}], rows: [[cell, ...]]}`` — a tiny sample.
     Identifiers are quoted safely; no ORDER BY so a big table still returns fast."""

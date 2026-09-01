@@ -480,7 +480,6 @@ def onboard_preview(request: Request, f: str):
 @app.post("/onboard/create")
 async def onboard_create(
     request: Request,
-    f: str = Form(...),
     name: str = Form(...),
     table: str = Form(...),
     load_type: str = Form(...),
@@ -488,9 +487,30 @@ async def onboard_create(
     recurrence: str = Form("ONE_TIME"),
     owner: str = Form(""),
     run_now: str = Form(""),
+    f: str = Form(""),
+    rdbms_cid: str = Form(""),
+    rdbms_schema: str = Form(""),
+    rdbms_table: str = Form(""),
+    rdbms_tenure: str = Form(""),
+    rdbms_fcol: str = Form(""),
+    rdbms_fpgtype: str = Form(""),
+    rdbms_ffrom: str = Form(""),
+    rdbms_fto: str = Form(""),
 ):
+    if rdbms_cid:
+        sf = None
+        if rdbms_fcol and (rdbms_ffrom.strip() or rdbms_fto.strip()):
+            sf = {"column": rdbms_fcol, "pg_type": rdbms_fpgtype or "text",
+                  "from": rdbms_ffrom.strip(), "to": rdbms_fto.strip()}
+        return await _onboard_create_rdbms(
+            request, name=name, table=table, load_type=load_type,
+            existence_column=existence_column, recurrence=recurrence, owner=owner,
+            cid=rdbms_cid, schema=rdbms_schema, src_table=rdbms_table,
+            tenure=rdbms_tenure, static_filter=sf,
+        )
+
     path = settings.upload_dir / f
-    if not path.is_file():
+    if not f or not path.is_file():
         return _redirect("/onboard", msg="error: upload not found, try again")
     header = fc.read_header(path)
     fmt = fc.detect_format(path)
@@ -515,6 +535,43 @@ async def onboard_create(
                     file=str(path), triggered_by="onboarding")
         return _redirect(dest, msg="Pipeline created — first run started")
     return _redirect(dest, msg="Pipeline created")
+
+
+async def _onboard_create_rdbms(request, *, name, table, load_type, existence_column,
+                                recurrence, owner, cid, schema, src_table, tenure,
+                                static_filter):
+    if rdbms.connection_meta(cid) is None:
+        return _redirect("/onboard", msg="error: that connection expired — reconnect")
+    try:
+        header = [c["name"] for c in rdbms.columns(cid, schema, src_table)]
+    except rdbms.RdbmsError as exc:
+        return _redirect("/onboard", msg=f"error: {exc}")
+    column_types, required = await _column_types_from_form(request, header)
+    natural_key = await _natural_key_from_form(request, header)
+    try:
+        cfg = registry.onboard_rdbms_source(
+            source_name=name, table_name=table, columns=header,
+            load_type=load_type, existence_check_column=(existence_column or None),
+            load_recurrence=recurrence, owner=(owner or None),
+            column_types=column_types, required=required, natural_key=natural_key,
+            connection_id=cid, source_schema=schema, source_table=src_table,
+            tenure_column=(tenure or None), static_filter=static_filter,
+        )
+    except registry.RegistryError as exc:
+        try:
+            hdr, rows = rdbms.sample_rows(cid, schema, src_table, limit=50,
+                                         static_filter=static_filter)
+        except rdbms.RdbmsError:
+            hdr, rows = header, []
+        return _render(request, "preview.html", error=str(exc),
+                       fmt=f"RDBMS · {schema}.{src_table}", header=hdr, rows=rows,
+                       cast_labels=casts.LABELS,
+                       col_types=rdbms.column_tokens(cid, schema, src_table),
+                       rdbms={"cid": cid, "schema": schema, "table": src_table,
+                              "tenure": tenure, "filter": static_filter})
+
+    return _redirect(f"/t/{cfg.source_id}/{cfg.table_name}",
+                     msg="RDBMS pipeline created — the extract runner lands in phase 4")
 
 
 # --------------------------------------------------------------------------- #
@@ -631,12 +688,51 @@ def onboard_rdbms_peek(request: Request, connection_id: str, schema: str, table:
 @app.get("/onboard/rdbms/{connection_id}/{schema}/{table}/configure",
          response_class=HTMLResponse)
 def onboard_rdbms_configure(request: Request, connection_id: str, schema: str, table: str):
-    """Phase-2 stub — the bound-the-pull screen (tenure column + static filter)
-    and the hand-off into the step-2 preview land here in phase 3."""
+    """Bound-the-pull: pick a tenure (date) column for Full/Tenure runs and an
+    optional static range filter so the whole table doesn't come across."""
     if rdbms.connection_meta(connection_id) is None:
         return _redirect("/onboard", msg="error: that connection expired — reconnect")
+    try:
+        cols = rdbms.columns(connection_id, schema, table)
+    except rdbms.RdbmsError as exc:
+        return _redirect(f"/onboard/rdbms/{connection_id}/{schema}/tables",
+                         msg=f"error: {exc}")
+    for c in cols:
+        c["token"] = rdbms.token_for(c["data_type"])
     return _render(request, "rdbms_configure.html", connection_id=connection_id,
-                   schema=schema, table=table)
+                   schema=schema, table=table, cols=cols,
+                   date_cols=[c["name"] for c in cols if c["token"] in ("date", "timestamptz")])
+
+
+@app.post("/onboard/rdbms/{connection_id}/{schema}/{table}/preview",
+          response_class=HTMLResponse)
+def onboard_rdbms_preview(request: Request, connection_id: str, schema: str, table: str,
+                          tenure_column: str = Form(""),
+                          filter_column: str = Form(""), filter_from: str = Form(""),
+                          filter_to: str = Form("")):
+    if rdbms.connection_meta(connection_id) is None:
+        return _redirect("/onboard", msg="error: that connection expired — reconnect")
+    static_filter = None
+    if filter_column and (filter_from.strip() or filter_to.strip()):
+        toks = rdbms.column_tokens(connection_id, schema, table)
+        static_filter = {
+            "column": filter_column,
+            "pg_type": casts.pg_type(toks.get(filter_column, "text")),
+            "from": filter_from.strip(), "to": filter_to.strip(),
+        }
+    try:
+        header, rows = rdbms.sample_rows(connection_id, schema, table, limit=200,
+                                        static_filter=static_filter)
+    except rdbms.RdbmsError as exc:
+        return _redirect(
+            f"/onboard/rdbms/{connection_id}/{schema}/{table}/configure",
+            msg=f"error: {exc}")
+    return _render(request, "preview.html",
+                   fmt=f"RDBMS · {schema}.{table}", header=header, rows=rows,
+                   cast_labels=casts.LABELS,
+                   col_types=rdbms.column_tokens(connection_id, schema, table),
+                   rdbms={"cid": connection_id, "schema": schema, "table": table,
+                          "tenure": tenure_column, "filter": static_filter})
 
 
 # --------------------------------------------------------------------------- #

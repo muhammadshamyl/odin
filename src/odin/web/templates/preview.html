@@ -23,7 +23,20 @@
 {% if error %}<div class="flash err" style="margin-top:16px">{{ error }}</div>{% endif %}
 
 <form action="/onboard/create" method="post">
+{% if rdbms %}
+<input type="hidden" name="rdbms_cid" value="{{ rdbms.cid }}">
+<input type="hidden" name="rdbms_schema" value="{{ rdbms.schema }}">
+<input type="hidden" name="rdbms_table" value="{{ rdbms.table }}">
+<input type="hidden" name="rdbms_tenure" value="{{ rdbms.tenure or '' }}">
+{% if rdbms.filter %}
+<input type="hidden" name="rdbms_fcol" value="{{ rdbms.filter.column }}">
+<input type="hidden" name="rdbms_fpgtype" value="{{ rdbms.filter.pg_type }}">
+<input type="hidden" name="rdbms_ffrom" value="{{ rdbms.filter['from'] }}">
+<input type="hidden" name="rdbms_fto" value="{{ rdbms.filter['to'] }}">
+{% endif %}
+{% else %}
 <input type="hidden" name="f" value="{{ f }}">
+{% endif %}
 
 <div class="grid g-2-1" style="margin-top:16px">
   <div class="card marked">
@@ -45,7 +58,7 @@
     <div class="pad">
       <span class="mlabel">Production column types</span>
       <p class="sub" style="margin:.3rem 0 .6rem">Default <b class="mono">text</b>. Everything stays text in staging; these apply on the staging&nbsp;→&nbsp;production transform.</p>
-      {{ type_rows(header, cast_labels) }}
+      {{ type_rows(header, cast_labels, col_types or {}) }}
     </div>
   </div>
 

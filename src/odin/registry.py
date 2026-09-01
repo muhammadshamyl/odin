@@ -10,10 +10,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from psycopg import sql
+from psycopg.types.json import Json
 
 from odin import casts, ddl
 from odin.db import connection
-from odin.ddl import PRODUCTION_META
+from odin.ddl import PRODUCTION_META, STAGING_META
 from odin.locks import lock
 from odin.naming import (
     bare,
@@ -26,6 +27,11 @@ from odin.naming import (
 )
 
 _LOAD_TYPES = ("INCREMENTAL", "FULL_SNAPSHOT")
+
+# column names Odin adds to staging / production — a source column may not reuse them
+_RESERVED_COLS = frozenset(
+    n.lower() for n, _ in (*STAGING_META, *PRODUCTION_META)
+) | {"nk"}
 
 
 @dataclass(frozen=True)
@@ -80,17 +86,74 @@ def onboard_file_source(
     source_name: str,
     file_format: str,               # 'CSV' | 'TXT'
     table_name: str,
-    columns: list[str],             # approved header, in order
-    load_type: str,                 # 'INCREMENTAL' | 'FULL_SNAPSHOT'
-    existence_check_column: str | None = None,   # single-column INCREMENTAL check
+    columns: list[str],
+    load_type: str,
+    existence_check_column: str | None = None,
     load_recurrence: str = "ONE_TIME",
     owner: str | None = None,
-    column_types: dict[str, str] | None = None,  # column -> casts token; default all 'text'
-    required: set[str] | None = None,            # columns that must be non-empty (NOT NULL)
-    natural_key: list[str] | None = None,        # composite INCREMENTAL key; supersedes existence_check_column
+    column_types: dict[str, str] | None = None,
+    required: set[str] | None = None,
+    natural_key: list[str] | None = None,
+) -> TableConfig:
+    return _onboard(
+        source_name=source_name, table_name=table_name,
+        src_type=("FILE_CSV" if file_format == "CSV" else "FILE_TXT"),
+        columns=columns, load_type=load_type,
+        existence_check_column=existence_check_column, load_recurrence=load_recurrence,
+        owner=owner, column_types=column_types, required=required, natural_key=natural_key,
+    )
+
+
+def onboard_rdbms_source(
+    *,
+    source_name: str,
+    table_name: str,
+    columns: list[str],
+    load_type: str,
+    connection_id: str,
+    source_schema: str,
+    source_table: str,
+    tenure_column: str | None = None,
+    static_filter: dict | None = None,
+    existence_check_column: str | None = None,
+    load_recurrence: str = "ONE_TIME",
+    owner: str | None = None,
+    column_types: dict[str, str] | None = None,
+    required: set[str] | None = None,
+    natural_key: list[str] | None = None,
+) -> TableConfig:
+    """Register an RDBMS-backed pipeline. Same tables + registry rows as the file
+    path, plus a ``registry_rdbms_source`` row holding the connection, source
+    schema/table, tenure column and static filter."""
+    return _onboard(
+        source_name=source_name, table_name=table_name, src_type="RDBMS",
+        columns=columns, load_type=load_type,
+        existence_check_column=existence_check_column, load_recurrence=load_recurrence,
+        owner=owner, column_types=column_types, required=required, natural_key=natural_key,
+        rdbms_sidecar={
+            "connection_id": connection_id, "source_schema": source_schema,
+            "source_table": source_table, "tenure_column": tenure_column,
+            "static_filter": static_filter,
+        },
+    )
+
+
+def _onboard(
+    *,
+    source_name: str,
+    table_name: str,
+    src_type: str,
+    columns: list[str],
+    load_type: str,
+    existence_check_column: str | None = None,
+    load_recurrence: str = "ONE_TIME",
+    owner: str | None = None,
+    column_types: dict[str, str] | None = None,
+    required: set[str] | None = None,
+    natural_key: list[str] | None = None,
+    rdbms_sidecar: dict | None = None,
 ) -> TableConfig:
     source_id = slug(source_name)
-    src_type = "FILE_CSV" if file_format == "CSV" else "FILE_TXT"
     load_type = load_type.upper()
     column_types = column_types or {}
     required = set(required or ())
@@ -100,6 +163,13 @@ def onboard_file_source(
         raise RegistryError(f"load_type must be one of {_LOAD_TYPES}, got {load_type!r}")
     if len(columns) != len(set(columns)):
         raise RegistryError("duplicate column names in header")
+    clash = [c for c in columns if c.lower() in _RESERVED_COLS]
+    if clash:
+        raise RegistryError(
+            "column name(s) " + ", ".join(repr(c) for c in clash)
+            + " collide with a reserved metadata column "
+            + f"({', '.join(sorted(_RESERVED_COLS))}) — rename or exclude them at the source"
+        )
 
     _validate_types(column_types, required, columns)
 
@@ -203,6 +273,25 @@ def onboard_file_source(
                 cur.execute(ddl.nk_index_ddl(prd))
                 cur.execute(ddl.nk_index_ddl(wtbl))
 
+            if rdbms_sidecar is not None:
+                sf = rdbms_sidecar.get("static_filter")
+                cur.execute(
+                    """INSERT INTO registry_rdbms_source
+                         (source_id, table_name, connection_id, source_schema,
+                          source_table, tenure_column, static_filter)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s)
+                       ON CONFLICT (source_id, table_name) DO UPDATE SET
+                         connection_id = EXCLUDED.connection_id,
+                         source_schema = EXCLUDED.source_schema,
+                         source_table  = EXCLUDED.source_table,
+                         tenure_column = EXCLUDED.tenure_column,
+                         static_filter = EXCLUDED.static_filter""",
+                    (source_id, table_name, rdbms_sidecar["connection_id"],
+                     rdbms_sidecar["source_schema"], rdbms_sidecar["source_table"],
+                     rdbms_sidecar.get("tenure_column"),
+                     Json(sf) if sf else None),
+                )
+
     return TableConfig(
         source_id, table_name, stg, prd, load_type,
         existence_check_column, load_recurrence, "ACTIVE", nk_str,
@@ -222,6 +311,20 @@ def get_table(source_id: str, table_name: str) -> TableConfig:
     if row is None:
         raise RegistryError(f"{source_id}.{table_name} is not registered")
     return TableConfig(**row)
+
+
+def get_rdbms_source(source_id: str, table_name: str) -> dict | None:
+    """The ``registry_rdbms_source`` row for a pipeline, or ``None`` for a file
+    source."""
+    with connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """SELECT connection_id, source_schema, source_table,
+                      tenure_column, static_filter
+               FROM registry_rdbms_source
+               WHERE source_id = %s AND table_name = %s""",
+            (source_id, table_name),
+        )
+        return cur.fetchone()
 
 
 def get_columns(source_id: str, table_name: str) -> list[str]:

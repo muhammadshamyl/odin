@@ -1,22 +1,59 @@
 {% extends "base.html" %}
-{% block title %}Onboard — configure {{ table }}{% endblock %}
-{% block crumbs %}<a href="/">Operations Deck</a> <span style="opacity:.4">/</span> <a href="/onboard">Onboard Source</a> <span style="opacity:.4">/</span> <b>{{ schema }}.{{ table }}</b>{% endblock %}
+{% block title %}Onboard — bound the pull{% endblock %}
+{% block crumbs %}<a href="/">Operations Deck</a> <span style="opacity:.4">/</span> <a href="/onboard">Onboard Source</a> <span style="opacity:.4">/</span> <a href="/onboard/rdbms/{{ connection_id }}/{{ schema }}/tables">{{ schema }}</a> <span style="opacity:.4">/</span> <b>{{ table }}</b>{% endblock %}
 {% block body %}
 
 <div class="shead">
   <div class="no">02</div>
   <div>
-    <span class="eyebrow">Connect ✓ · pick schema ✓ · pick table ✓ · <b style="color:var(--text)">configure</b></span>
+    <span class="eyebrow">Connect ✓ · pick schema ✓ · pick table ✓ · <b style="color:var(--text)">bound the pull</b> · preview &amp; types · create</span>
     <h1>{{ schema }}.{{ table }}</h1>
-    <p class="sub">Phase 3 lands here: choose a tenure (date) column and an optional range filter so the whole table doesn't come across at once, then hand off to the same preview &amp; column-types screen the file path uses.</p>
+    <p class="sub">Pick the date column that scopes a windowed run, and — optionally — a range so the first pull isn't the whole table. Then preview and set column types.</p>
   </div>
 </div>
 
-<div class="card marked" style="margin-top:16px; max-width:34rem">
-  <p class="hint">Not built yet — this is the phase-2 stub for the “bound the pull” step.</p>
-  <div class="btn-row" style="margin-top:1rem">
-    <a class="btn ghost" href="/onboard/rdbms/{{ connection_id }}/{{ schema }}/tables">&larr; back to the table web</a>
+<form action="/onboard/rdbms/{{ connection_id }}/{{ schema }}/{{ table }}/preview" method="post"
+      class="card marked" style="margin-top:16px; max-width:38rem">
+
+  <div class="card-head"><h2>Tenure column</h2></div>
+  <p class="hint" style="margin-bottom:.6rem">A <span class="mono">date</span> / <span class="mono">timestamp</span> column. Each manual run asks <b>Full</b> or <b>Tenure</b> (a window on this column); scheduled runs use it automatically. Optional — leave as “none” for full-only.</p>
+  <label class="field">Column</label>
+  <select name="tenure_column">
+    <option value="">— none (full runs only) —</option>
+    {% for c in date_cols %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+  </select>
+
+  <div class="card-head" style="margin-top:1.4rem"><h2>Static range filter <span class="badge info">optional</span></h2></div>
+  <p class="hint" style="margin-bottom:.6rem">ANDed into <em>every</em> extract query. A date column gets a calendar; anything else takes plain bounds. Leave the column as “none” to pull everything (within the tenure window).</p>
+  <div class="grid cols-2" style="gap:.2rem .9rem">
+    <div style="grid-column:1/-1">
+      <label class="field">Column</label>
+      <select name="filter_column" id="fcol">
+        <option value="" data-token="">— none —</option>
+        {% for c in cols %}<option value="{{ c.name }}" data-token="{{ c.token }}">{{ c.name }} · {{ c.data_type }}</option>{% endfor %}
+      </select>
+    </div>
+    <div><label class="field">From</label><input name="filter_from" id="ffrom" autocomplete="off"></div>
+    <div><label class="field">To</label><input name="filter_to" id="fto" autocomplete="off"></div>
   </div>
-</div>
+
+  <div class="btn-row" style="margin-top:1.3rem">
+    <button class="btn primary" type="submit">Preview &amp; set types &rarr;</button>
+    <a class="btn ghost" href="/onboard/rdbms/{{ connection_id }}/{{ schema }}/tables">&larr; back</a>
+  </div>
+</form>
+
+<script>
+(function () {
+  var sel = document.getElementById("fcol");
+  var a = document.getElementById("ffrom"), b = document.getElementById("fto");
+  function sync() {
+    var tok = sel.options[sel.selectedIndex].getAttribute("data-token");
+    var t = (tok === "date") ? "date" : (tok === "timestamptz") ? "datetime-local" : "text";
+    a.type = t; b.type = t;
+  }
+  sel.addEventListener("change", sync); sync();
+})();
+</script>
 
 {% endblock %}
