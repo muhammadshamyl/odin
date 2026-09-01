@@ -59,13 +59,30 @@ def _colref(alias: str | None, col: str) -> sql.Composed:
     return sql.SQL("{}").format(sql.Identifier(col))
 
 
+def _nk_typed(ref: sql.Composed, pg_type: str) -> sql.Composed:
+    """One key column, coerced to its production type for hashing / matching.
+
+    ``text``            -> the value as-is (a blank text key is a real value).
+    everything else      -> ``NULLIF(btrim(ref::text), '')::<type>`` so a blank /
+                            whitespace staging cell (which the ``cast:`` quarantine
+                            filter lets through for a *nullable* key column)
+                            becomes NULL instead of blowing up on ``''::date``.
+                            Matches :func:`odin.casts.cast_select`, so staging and
+                            the already-typed production row agree.
+    """
+    if pg_type == "text":
+        return sql.SQL("({})::text").format(ref)
+    return sql.SQL("NULLIF(btrim({r}::text), '')::{t}").format(r=ref, t=sql.SQL(pg_type))
+
+
 def natural_key_sql(alias: str | None, cols: list[str], pg_types: list[str]) -> sql.Composed:
-    """``hashtextextended(...)::bigint`` over the ordered key columns — each cast
-    to its production type then to text, unit-separated (chr 31), NULLs tokenised
-    (chr 1). Identical on staging (post-quarantine, every value casts) and on
-    production, so the two agree row-for-row."""
+    """``hashtextextended(...)::bigint`` over the ordered key columns — each
+    coerced to its production type (via :func:`_nk_typed`: blank/whitespace ->
+    NULL for a non-text key, so ``''::date`` never blows up), then to text,
+    unit-separated (chr 31), NULLs tokenised (chr 1). Identical on staging and on
+    the already-typed production row, so the two agree row-for-row."""
     parts = [
-        sql.SQL("coalesce(({c}::{t})::text, chr(1))").format(c=_colref(alias, c), t=sql.SQL(t))
+        sql.SQL("coalesce(({v})::text, chr(1))").format(v=_nk_typed(_colref(alias, c), t))
         for c, t in zip(cols, pg_types)
     ]
     return sql.SQL("hashtextextended(concat_ws(chr(31), {}), 0)::bigint").format(
@@ -78,8 +95,8 @@ def natural_key_match(a: str, b: str, cols: list[str], pg_types: list[str]) -> s
     evaluated on rows that already share an ``nk`` hash, so a 64-bit hash
     collision cannot cause a wrong route."""
     return sql.SQL(" AND ").join(
-        sql.SQL("({a}::{t} IS NOT DISTINCT FROM {b}::{t})").format(
-            a=_colref(a, c), b=_colref(b, c), t=sql.SQL(t)
+        sql.SQL("({a} IS NOT DISTINCT FROM {b})").format(
+            a=_nk_typed(_colref(a, c), t), b=_nk_typed(_colref(b, c), t)
         )
         for c, t in zip(cols, pg_types)
     )

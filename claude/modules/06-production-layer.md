@@ -46,11 +46,16 @@ Production is the typed, partitioned correctness boundary. The **staging → pro
 
      ```
      nk = hashtextextended(concat_ws(chr(31),
-              coalesce((col1::type1)::text, chr(1)),
-              coalesce((col2::type2)::text, chr(1)), …), 0)::bigint
+              coalesce((<key1>)::text, chr(1)),
+              coalesce((<key2>)::text, chr(1)), …), 0)::bigint
+
+     <keyN> = colN::text                                  -- text key column
+            | NULLIF(btrim(colN::text), '')::typeN         -- any other type
      ```
 
-     `collides = EXISTS (SELECT 1 FROM production.<t> p WHERE p.nk = <staging nk> AND <raw-column tie-break>)`. Two statements: (1) `INSERT INTO waiting.<tbl> SELECT …, <nk> FROM staging WHERE collides` + **one** `waiting_batch_log` row for the whole run (`row_count = N`, `existence_value = "natural key: <cols>"`); (2) `DELETE FROM staging WHERE collides`. Then the survivors → production, `nk` populated by the same expression. The tie-break (`col::type IS NOT DISTINCT FROM col::type` per key column) runs only on rows that already share an `nk`, so a 64-bit hash collision cannot mis-route. Key columns cannot be `numeric`/`unit_interval`-typed.
+     The `NULLIF(btrim(…), '')` wrap (`ddl._nk_typed`) matters because the `cast:<col>` quarantine filter lets a **blank** value through for a *nullable* key column — bare `''::date` would abort the whole transform. Blank → NULL → `chr(1)`, matching a production NULL. Same coercion in the tie-break.
+
+     `collides = EXISTS (SELECT 1 FROM production.<t> p WHERE p.nk = <staging nk> AND <raw-column tie-break>)`. Two statements: (1) `INSERT INTO waiting.<tbl> SELECT …, <nk> FROM staging WHERE collides` + **one** `waiting_batch_log` row for the whole run (`row_count = N`, `existence_value = "natural key: <cols>"`); (2) `DELETE FROM staging WHERE collides`. Then the survivors → production, `nk` populated by the same expression. The tie-break (`<keyN> IS NOT DISTINCT FROM <keyN>` per key column) runs only on rows that already share an `nk`, so a 64-bit hash collision cannot mis-route. Key columns cannot be `numeric`/`unit_interval`-typed. **RDBMS pipelines use the same path** — the natural-key picker is on the shared preview screen.
 
 ### 6.3 Business Rule Application
 - Standardization (e.g. `UPPER(TRIM(status))`) and universal derived columns, from the `quality_rules` / business-rules config — not hardcoded
