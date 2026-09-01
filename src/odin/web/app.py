@@ -555,16 +555,88 @@ def _pg_version_short(v: str) -> str:
 
 @app.get("/onboard/rdbms/{connection_id}/schemas", response_class=HTMLResponse)
 def onboard_rdbms_schemas(request: Request, connection_id: str):
-    """Phase-1 stub — re-probes and lists schema names. Phase 2 turns this into
-    the visual schema picker."""
+    """Visual schema picker — one tile per schema that holds a table."""
+    meta = rdbms.connection_meta(connection_id)
+    if meta is None:
+        return _redirect("/onboard", msg="error: that connection expired — reconnect")
     try:
-        p = rdbms.get_connection(connection_id)
-        info = rdbms.probe(p)
+        info = rdbms.probe(rdbms.get_connection(connection_id))
     except rdbms.RdbmsError as exc:
         return _redirect("/onboard", msg=f"error: {exc}")
-    meta = rdbms.connection_meta(connection_id)
     return _render(request, "rdbms_schemas.html",
                    connection_id=connection_id, meta=meta, schemas=info["schemas"])
+
+
+def _cobweb_layout(names: list[str], edges: list[dict],
+                   *, w: int = 960, h: int = 620) -> dict:
+    """Place `names` evenly on a circle and resolve each FK edge to a curve that
+    bows toward the centre — the 'web' look. Pure geometry, no physics."""
+    import math
+    cx, cy = w / 2, h / 2
+    n = max(len(names), 1)
+    r = min(max(120 + n * 6, 150), int(min(w, h) / 2) - 70)
+    pos = {}
+    nodes = []
+    for i, name in enumerate(names):
+        a = 2 * math.pi * i / n - math.pi / 2
+        x, y = cx + r * math.cos(a), cy + r * math.sin(a)
+        pos[name] = (x, y)
+        nodes.append({"name": name, "x": round(x, 1), "y": round(y, 1)})
+    curves = []
+    for e in edges:
+        if e["from"] in pos and e["to"] in pos:
+            x1, y1 = pos[e["from"]]
+            x2, y2 = pos[e["to"]]
+            # control point pulled 45% of the way to centre
+            qx = (x1 + x2) / 2 + (cx - (x1 + x2) / 2) * 0.55
+            qy = (y1 + y2) / 2 + (cy - (y1 + y2) / 2) * 0.55
+            curves.append({"from": e["from"], "to": e["to"],
+                           "d": f"M{x1:.1f} {y1:.1f} Q{qx:.1f} {qy:.1f} {x2:.1f} {y2:.1f}"})
+    return {"w": w, "h": h, "cx": cx, "cy": cy, "nodes": nodes, "curves": curves}
+
+
+@app.get("/onboard/rdbms/{connection_id}/{schema}/tables", response_class=HTMLResponse)
+def onboard_rdbms_tables(request: Request, connection_id: str, schema: str, q: str = ""):
+    """The FK 'cobweb' for one schema. `q` filters the drawn tables; the
+    `#web` block is what the filter box swaps."""
+    meta = rdbms.connection_meta(connection_id)
+    if meta is None:
+        return _redirect("/onboard", msg="error: that connection expired — reconnect")
+    try:
+        tables = rdbms.list_tables(connection_id, schema, q=q)
+        edges = rdbms.fk_edges(connection_id, schema)
+    except rdbms.RdbmsError as exc:
+        return _redirect(f"/onboard/rdbms/{connection_id}/schemas",
+                         msg=f"error: {exc}")
+    by_name = {t["name"]: t for t in tables}
+    layout = _cobweb_layout([t["name"] for t in tables], edges)
+    tmpl = "_rdbms_web.html" if _is_hx(request) else "rdbms_tables.html"
+    return _render(request, tmpl, connection_id=connection_id, meta=meta,
+                   schema=schema, q=q, tables=tables, table_meta=by_name,
+                   layout=layout, edge_count=len(layout["curves"]))
+
+
+@app.get("/onboard/rdbms/{connection_id}/{schema}/{table}/peek",
+         response_class=HTMLResponse)
+def onboard_rdbms_peek(request: Request, connection_id: str, schema: str, table: str):
+    try:
+        data = rdbms.peek(connection_id, schema, table)
+    except rdbms.RdbmsError as exc:
+        return HTMLResponse(f'<div class="sql-err">{exc}</div>', status_code=200)
+    return _render(request, "_rdbms_peek.html", connection_id=connection_id,
+                   schema=schema, table=table, columns=data["columns"],
+                   rows=data["rows"])
+
+
+@app.get("/onboard/rdbms/{connection_id}/{schema}/{table}/configure",
+         response_class=HTMLResponse)
+def onboard_rdbms_configure(request: Request, connection_id: str, schema: str, table: str):
+    """Phase-2 stub — the bound-the-pull screen (tenure column + static filter)
+    and the hand-off into the step-2 preview land here in phase 3."""
+    if rdbms.connection_meta(connection_id) is None:
+        return _redirect("/onboard", msg="error: that connection expired — reconnect")
+    return _render(request, "rdbms_configure.html", connection_id=connection_id,
+                   schema=schema, table=table)
 
 
 # --------------------------------------------------------------------------- #

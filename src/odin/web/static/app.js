@@ -306,4 +306,27 @@
     setInterval(tickReltime, 30000);
     setInterval(tickClock, 1000);
   });
+
+  /* ---- RDBMS onboarding: select a table in the FK web -------------- */
+  function selectWebNode(g) {
+    var svg = g.ownerSVGElement || g.closest("svg");
+    if (!svg) return;
+    svg.querySelectorAll(".tnode.sel").forEach(function (n) { n.classList.remove("sel"); });
+    g.classList.add("sel");
+    var name = g.getAttribute("data-name");
+    svg.querySelectorAll(".thread").forEach(function (p) {
+      p.classList.toggle("lit", p.dataset.a === name || p.dataset.b === name);
+    });
+    var url = g.getAttribute("data-peek-url");
+    if (url && window.htmx) htmx.ajax("GET", url, { target: "#peek", swap: "innerHTML" });
+  }
+  document.addEventListener("click", function (e) {
+    var g = e.target.closest && e.target.closest(".rdbms-web .tnode");
+    if (g) selectWebNode(g);
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    var g = e.target.closest && e.target.closest(".rdbms-web .tnode");
+    if (g) { e.preventDefault(); selectWebNode(g); }
+  });
 })();

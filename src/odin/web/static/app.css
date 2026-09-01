@@ -1288,3 +1288,41 @@ li.CodeMirror-hint-active{background:var(--phos-soft); color:var(--text)}
   color:var(--text-faint); font:400 10px/1.5 var(--mono);
   letter-spacing:.08em; text-transform:uppercase;
 }
+
+/* ---- onboarding: RDBMS schema tiles + FK cobweb ---- */
+.tilegrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(13rem,1fr)); gap:12px}
+.tile{
+  display:block; text-decoration:none; color:inherit;
+  background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
+  padding:14px 16px 15px; transition:border-color .15s var(--ease), background .15s var(--ease);
+}
+.tile:hover{border-color:var(--accent); background:color-mix(in srgb,var(--accent) 6%,var(--panel))}
+.tile-h{display:flex; align-items:center; gap:8px; font:600 13px/1 var(--mono); color:var(--text)}
+.tile-n{font:700 26px/1.1 var(--display); color:var(--accent); margin:.3rem 0 .1rem}
+
+.web-filter{
+  max-width:16rem; margin-bottom:.7rem;
+  font:400 12px/1.4 var(--mono); padding:7px 10px;
+}
+.rdbms-web{
+  width:100%; height:auto; display:block;
+  background:var(--panel-2); border:1px solid var(--border-soft); border-radius:var(--radius-sm);
+}
+.rdbms-web .thread{
+  fill:none; stroke:var(--border); stroke-width:1; opacity:.75;
+  transition:stroke .15s var(--ease), opacity .15s var(--ease);
+}
+.rdbms-web .thread.lit{stroke:var(--accent); opacity:1; stroke-width:1.6}
+.rdbms-web .tnode{cursor:pointer}
+.rdbms-web .tnode circle{
+  fill:var(--panel); stroke:var(--text-faint); stroke-width:1.5;
+  transition:fill .15s var(--ease), stroke .15s var(--ease);
+}
+.rdbms-web .tnode text{
+  fill:var(--text-soft); font:500 10px/1 var(--mono); pointer-events:none;
+  transition:fill .15s var(--ease);
+}
+.rdbms-web .tnode:hover circle{stroke:var(--accent)}
+.rdbms-web .tnode:hover text{fill:var(--text)}
+.rdbms-web .tnode.sel circle{fill:var(--accent); stroke:var(--accent)}
+.rdbms-web .tnode.sel text{fill:var(--accent); font-weight:700}

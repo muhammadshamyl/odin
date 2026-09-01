@@ -1,0 +1,26 @@
+{# The filter box + the radial FK web. The whole block is what the filter swaps. #}
+<input class="web-filter" name="q" value="{{ q }}" placeholder="filter tables…"
+       autocomplete="off"
+       hx-get="/onboard/rdbms/{{ connection_id }}/{{ schema }}/tables"
+       hx-trigger="keyup changed delay:250ms, search"
+       hx-target="#web" hx-swap="innerHTML">
+
+{% if tables %}
+<svg class="rdbms-web" viewBox="0 0 {{ layout.w }} {{ layout.h }}" role="img"
+     aria-label="Foreign-key web of {{ schema }}">
+  {% for c in layout.curves %}
+  <path class="thread" d="{{ c.d }}" data-a="{{ c.from }}" data-b="{{ c.to }}"/>
+  {% endfor %}
+  {% for nd in layout.nodes %}{% set t = table_meta[nd.name] %}
+  <g class="tnode" data-name="{{ nd.name }}" role="button" tabindex="0"
+     data-peek-url="/onboard/rdbms/{{ connection_id }}/{{ schema }}/{{ nd.name }}/peek">
+    <circle cx="{{ nd.x }}" cy="{{ nd.y }}" r="6"/>
+    <text x="{{ nd.x }}" y="{{ nd.y }}" dy="-11" text-anchor="middle">{{ nd.name[:24] }}</text>
+    <title>{{ nd.name }} · {{ t.rows | compact }} rows · {{ t.cols }} cols</title>
+  </g>
+  {% endfor %}
+</svg>
+<p class="hint" style="margin-top:.5rem">Row counts are planner estimates (<span class="mono">pg_class.reltuples</span>), not exact.</p>
+{% else %}
+<div class="empty"><div class="art">∅</div>No table matches “{{ q }}”.</div>
+{% endif %}

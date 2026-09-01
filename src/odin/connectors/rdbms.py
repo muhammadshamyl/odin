@@ -15,6 +15,7 @@ from dataclasses import dataclass
 
 import psycopg
 from psycopg import conninfo
+from psycopg import sql as _sql
 
 from odin.config import settings
 from odin.db import connection
@@ -150,3 +151,101 @@ def connection_meta(connection_id: str) -> dict | None:
             (connection_id,),
         )
         return cur.fetchone()
+
+
+# --------------------------------------------------------------------------- #
+# introspection — phase 2 (schema explorer + FK cobweb + peek)
+# --------------------------------------------------------------------------- #
+
+def _source_conn(connection_id: str):
+    """Open the *source* database from a stored connection id (autocommit,
+    short statement_timeout). Caller closes."""
+    p = get_connection(connection_id)
+    conn = psycopg.connect(p._dsn(), autocommit=True)
+    with conn.cursor() as cur:
+        cur.execute("SET statement_timeout = 8000")
+    return conn
+
+
+def list_tables(connection_id: str, schema: str, *, q: str = "") -> list[dict]:
+    """Base + partitioned tables in `schema`: name, planner row estimate, column
+    count. Optional substring filter `q` (case-insensitive)."""
+    try:
+        with _source_conn(connection_id) as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT c.relname AS name,
+                       GREATEST(c.reltuples, 0)::bigint AS rows,
+                       (SELECT count(*) FROM pg_attribute a
+                         WHERE a.attrelid = c.oid AND a.attnum > 0
+                           AND NOT a.attisdropped) AS cols
+                FROM pg_class c
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = %s AND c.relkind IN ('r', 'p')
+                  AND (%s = '' OR c.relname ILIKE '%%' || %s || '%%')
+                ORDER BY c.relname
+                """,
+                (schema, q, q),
+            )
+            return [{"name": r[0], "rows": int(r[1]), "cols": int(r[2])}
+                    for r in cur.fetchall()]
+    except (psycopg.Error, OSError) as exc:
+        raise RdbmsError(_clean_err(exc)) from exc
+
+
+def fk_edges(connection_id: str, schema: str) -> list[dict]:
+    """Foreign-key pairs whose *both* ends live in `schema` — the cobweb threads.
+    ``[{from, to}]`` (child table -> parent table), de-duplicated."""
+    try:
+        with _source_conn(connection_id) as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT DISTINCT cl.relname AS child, pr.relname AS parent
+                FROM pg_constraint k
+                JOIN pg_class cl ON cl.oid = k.conrelid
+                JOIN pg_class pr ON pr.oid = k.confrelid
+                JOIN pg_namespace ncl ON ncl.oid = cl.relnamespace
+                JOIN pg_namespace npr ON npr.oid = pr.relnamespace
+                WHERE k.contype = 'f'
+                  AND ncl.nspname = %s AND npr.nspname = %s
+                  AND cl.relname <> pr.relname
+                """,
+                (schema, schema),
+            )
+            return [{"from": r[0], "to": r[1]} for r in cur.fetchall()]
+    except (psycopg.Error, OSError) as exc:
+        raise RdbmsError(_clean_err(exc)) from exc
+
+
+def columns(connection_id: str, schema: str, table: str) -> list[dict]:
+    """``[{name, data_type}]`` in ordinal order (works on an empty table)."""
+    try:
+        with _source_conn(connection_id) as conn, conn.cursor() as cur:
+            cur.execute(
+                """SELECT column_name, data_type
+                   FROM information_schema.columns
+                   WHERE table_schema = %s AND table_name = %s
+                   ORDER BY ordinal_position""",
+                (schema, table),
+            )
+            return [{"name": r[0], "data_type": r[1]} for r in cur.fetchall()]
+    except (psycopg.Error, OSError) as exc:
+        raise RdbmsError(_clean_err(exc)) from exc
+
+
+def peek(connection_id: str, schema: str, table: str, *, limit: int = 20) -> dict:
+    """``{columns: [{name, data_type}], rows: [[cell, ...]]}`` — a tiny sample.
+    Identifiers are quoted safely; no ORDER BY so a big table still returns fast."""
+    cols = columns(connection_id, schema, table)
+    stmt = _sql.SQL("SELECT * FROM {}.{} LIMIT {}").format(
+        _sql.Identifier(schema), _sql.Identifier(table), _sql.Literal(int(limit)))
+    try:
+        with _source_conn(connection_id) as conn, conn.cursor() as cur:
+            cur.execute(stmt)
+            names = [d.name for d in cur.description]
+            rows = [["" if v is None else str(v) for v in row] for row in cur.fetchall()]
+    except (psycopg.Error, OSError) as exc:
+        raise RdbmsError(_clean_err(exc)) from exc
+    order = {c["name"]: c["data_type"] for c in cols}
+    head = [{"name": n, "data_type": order.get(n, "")} for n in names]
+    return {"columns": head, "rows": rows}

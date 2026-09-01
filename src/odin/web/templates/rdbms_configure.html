@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Onboard — configure {{ table }}{% endblock %}
+{% block crumbs %}<a href="/">Operations Deck</a> <span style="opacity:.4">/</span> <a href="/onboard">Onboard Source</a> <span style="opacity:.4">/</span> <b>{{ schema }}.{{ table }}</b>{% endblock %}
+{% block body %}
+
+<div class="shead">
+  <div class="no">02</div>
+  <div>
+    <span class="eyebrow">Connect ✓ · pick schema ✓ · pick table ✓ · <b style="color:var(--text)">configure</b></span>
+    <h1>{{ schema }}.{{ table }}</h1>
+    <p class="sub">Phase 3 lands here: choose a tenure (date) column and an optional range filter so the whole table doesn't come across at once, then hand off to the same preview &amp; column-types screen the file path uses.</p>
+  </div>
+</div>
+
+<div class="card marked" style="margin-top:16px; max-width:34rem">
+  <p class="hint">Not built yet — this is the phase-2 stub for the “bound the pull” step.</p>
+  <div class="btn-row" style="margin-top:1rem">
+    <a class="btn ghost" href="/onboard/rdbms/{{ connection_id }}/{{ schema }}/tables">&larr; back to the table web</a>
+  </div>
+</div>
+
+{% endblock %}

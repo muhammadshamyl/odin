@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Onboard — {{ schema }} tables{% endblock %}
+{% block crumbs %}<a href="/">Operations Deck</a> <span style="opacity:.4">/</span> <a href="/onboard">Onboard Source</a> <span style="opacity:.4">/</span> <a href="/onboard/rdbms/{{ connection_id }}/schemas">{{ meta.database }}</a> <span style="opacity:.4">/</span> <b>{{ schema }}</b>{% endblock %}
+{% block body %}
+
+<div class="shead">
+  <div class="no">02</div>
+  <div>
+    <span class="eyebrow">Connect ✓ · pick schema ✓ · <b style="color:var(--text)">pick table</b> · preview &amp; types · create</span>
+    <h1>{{ schema }} — table web</h1>
+    <p class="sub">Every table in <span class="mono">{{ schema }}</span>; the threads are foreign keys between them. Click a table to preview it, then continue to configure the pull.</p>
+  </div>
+</div>
+
+<div class="grid g-2-1" style="margin-top:16px; align-items:start">
+  <div class="card marked">
+    <div class="card-head"><h2>{{ tables|length }} tables</h2><div class="grow"></div>
+      <span class="mlabel">{{ edge_count }} foreign-key link{{ '' if edge_count == 1 else 's' }}</span></div>
+    <div id="web">{% include "_rdbms_web.html" %}</div>
+  </div>
+
+  <div class="card marked">
+    <div class="card-head"><h2>Preview</h2></div>
+    <div id="peek">
+      <div class="empty"><div class="art">◎</div>Select a table in the web.</div>
+    </div>
+  </div>
+</div>
+
+<div class="btn-row" style="margin-top:1.2rem">
+  <a class="btn ghost" href="/onboard/rdbms/{{ connection_id }}/schemas">&larr; change schema</a>
+</div>
+
+{% endblock %}
