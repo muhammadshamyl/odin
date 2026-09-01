@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Onboard — pick schema{% endblock %}
+{% block crumbs %}<a href="/">Operations Deck</a> <span style="opacity:.4">/</span> <a href="/onboard">Onboard Source</a> <span style="opacity:.4">/</span> <b>Pick schema</b>{% endblock %}
+{% block body %}
+
+<div class="shead">
+  <div class="no">02</div>
+  <div>
+    <span class="eyebrow">Step 1 · connect &rarr; <b style="color:var(--text)">pick schema</b> &rarr; pick table</span>
+    <h1>Pick a schema</h1>
+    <p class="sub">Connected to <span class="mono">{{ meta.host }}:{{ meta.port }}/{{ meta.database }}</span> as <span class="mono">{{ meta.username }}</span> — {{ meta.server_version.split()[:2] | join(' ') }}.</p>
+  </div>
+</div>
+
+<div class="card marked" style="margin-top:16px; max-width:40rem">
+  <div class="card-head"><h2>Schemas</h2><div class="grow"></div>
+    <span class="mlabel">{{ schemas|length }} with tables</span></div>
+  <div class="table-wrap">
+  <table class="data">
+    <thead><tr><th>Schema</th><th class="num">Tables</th><th></th></tr></thead>
+    <tbody>
+    {% for s in schemas %}
+    <tr>
+      <td class="m">{{ s.schema }}{% if s.schema == meta.default_schema %} <span class="badge info">default</span>{% endif %}</td>
+      <td class="num">{{ s.tables }}</td>
+      <td><span class="mlabel">next: table web</span></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="hint" style="margin-top:.8rem">Phase 2 turns this into a visual picker; selecting a schema opens a web of its tables and their foreign keys.</p>
+  <div class="btn-row" style="margin-top:1rem">
+    <a class="btn ghost" href="/onboard">&larr; change connection</a>
+  </div>
+</div>
+
+{% endblock %}

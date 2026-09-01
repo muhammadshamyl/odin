@@ -61,7 +61,7 @@ Current scope: **Slice 1 = CSV/TXT load & consume**. Slice 2 = RDBMS, Slice 3 = 
 | 1.3 | Extraction Scheduling | 📋 | Owned by Module 8 — nothing scheduled yet; runs are manual calls. |
 | 1.3a | Failure model — no automatic retry | ✅ | `extract.py` marks the file FAILED + `run_log` failed, re-raises, never retries. |
 | 1.4 | Flat File Writer | 🟡 | File sources: `extract.land_file` copies the file into `staging_file_area/{source}/{table}/{date}/` and registers it. DB → CSV writer not built (Slice 2). |
-| 1.5 | RDBMS Connector | 📋 | Slice 2. **Standalone CSV/TXT path ✅** via `connectors/file.py` (`detect_format`, `read_header`, `_rows`, `sample_rows`, `iter_batches`). |
+| 1.5 | RDBMS Connector | 🟡 | Slice 2, **phase 1 of 4 built** (`connectors/rdbms.py`, PostgreSQL only): `probe` (connect + `version()` + schema list, cleaned driver errors), `save_connection` / `get_connection` / `connection_meta` — credentials in a `secret` schema, password `pgcrypto`-encrypted (`sql/006_rdbms.sql`, key = `settings.rdbms_secret_key`). Web: `/onboard` reflowed to a 2-column source picker (File | Relational database), `POST /onboard/rdbms/test`, `/onboard/rdbms/{cid}/schemas` (stub list). **Next phases:** schema picker + FK-graph "cobweb" + table peek → bound-the-pull filter + step-2 hand-off (types pre-filled from source) → batched extract-to-CSV + Full/Tenure run prompt. Standalone CSV/TXT path ✅ via `connectors/file.py`. |
 | 1.6 | NoSQL Connector | 📋 | Slice 3. |
 | 1.6a | Nested-File Connector (XML/JSON/SHP) | 🌐 | Foundry transforms / later. |
 | 1.7 | Onboarding Sample Extraction | 🟡 | `connectors/file.sample_rows(path, n)` exists; not wired to a wizard (no UI). |

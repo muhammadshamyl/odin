@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     sql_row_cap: int = 1000          # default max rows rendered; "Load all" lifts it
     sql_row_hard_cap: int = 100_000  # ceiling even for "Load all"
 
+    # RDBMS sources (Slice 2). `rdbms_secret_key` symmetric-encrypts stored
+    # source passwords (pgcrypto) — set ODIN_RDBMS_SECRET_KEY in real use.
+    rdbms_secret_key: str = "odin-dev-rdbms-key-change-me"
+    rdbms_connect_timeout: int = 10   # seconds, for the source handshake
+    rdbms_batch_rows: int = 50_000    # rows per page when extracting a source table
+
     def ensure_dirs(self) -> None:
         self.staging_file_area.mkdir(parents=True, exist_ok=True)
         self.upload_dir.mkdir(parents=True, exist_ok=True)

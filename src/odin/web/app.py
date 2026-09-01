@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import time
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -26,6 +27,7 @@ from psycopg import sql
 from odin import casts, jobs, registry, resolve, sqlconsole
 from odin.config import settings
 from odin.connectors import file as fc
+from odin.connectors import rdbms
 from odin.db import connection
 from odin.naming import qname
 from odin.web import deck, sqlview
@@ -513,6 +515,56 @@ async def onboard_create(
                     file=str(path), triggered_by="onboarding")
         return _redirect(dest, msg="Pipeline created — first run started")
     return _redirect(dest, msg="Pipeline created")
+
+
+# --------------------------------------------------------------------------- #
+# onboard — RDBMS source (Slice 2)
+# --------------------------------------------------------------------------- #
+
+@app.post("/onboard/rdbms/test", response_class=HTMLResponse)
+def onboard_rdbms_test(
+    request: Request,
+    engine: str = Form("postgres"), host: str = Form(""), port: int = Form(5432),
+    database: str = Form(""), db_schema: str = Form(""), username: str = Form(""),
+    password: str = Form(""), ssl: str = Form("require"),
+):
+    p = rdbms.ConnParams(
+        host=host.strip(), port=port, database=database.strip(),
+        username=username.strip(), password=password, ssl_mode=ssl,
+        default_schema=(db_schema.strip() or None), engine=engine,
+    )
+    t0 = time.time()
+    try:
+        info = rdbms.probe(p)
+    except rdbms.RdbmsError as exc:
+        return _render(request, "_rdbms_test.html",
+                       error=str(exc), elapsed=time.time() - t0)
+    cid = rdbms.save_connection(p, server_version=info["server_version"],
+                                label=f"{host.strip()}/{database.strip()}")
+    return _render(request, "_rdbms_test.html",
+                   connection_id=cid, database=database.strip(),
+                   server_short=_pg_version_short(info["server_version"]),
+                   n_schemas=len(info["schemas"]), elapsed=time.time() - t0)
+
+
+def _pg_version_short(v: str) -> str:
+    # "PostgreSQL 16.2 on aarch64-apple-darwin…" -> "PostgreSQL 16.2"
+    parts = v.split()
+    return " ".join(parts[:2]) if len(parts) >= 2 else v[:40]
+
+
+@app.get("/onboard/rdbms/{connection_id}/schemas", response_class=HTMLResponse)
+def onboard_rdbms_schemas(request: Request, connection_id: str):
+    """Phase-1 stub — re-probes and lists schema names. Phase 2 turns this into
+    the visual schema picker."""
+    try:
+        p = rdbms.get_connection(connection_id)
+        info = rdbms.probe(p)
+    except rdbms.RdbmsError as exc:
+        return _redirect("/onboard", msg=f"error: {exc}")
+    meta = rdbms.connection_meta(connection_id)
+    return _render(request, "rdbms_schemas.html",
+                   connection_id=connection_id, meta=meta, schemas=info["schemas"])
 
 
 # --------------------------------------------------------------------------- #
