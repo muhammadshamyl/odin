@@ -196,13 +196,24 @@ def list_tables(connection_id: str, schema: str, *, q: str = "") -> list[dict]:
 
 
 def fk_edges(connection_id: str, schema: str) -> list[dict]:
-    """Foreign-key pairs whose *both* ends live in `schema` — the cobweb threads.
-    ``[{from, to}]`` (child table -> parent table), de-duplicated."""
+    """Foreign-key relationships whose *both* ends live in `schema` — the graph
+    threads. ``[{from, to, from_cols, to_cols}]`` (child table -> parent table),
+    one row per constraint; ``*_cols`` are the ordered column lists (composite
+    keys keep every column). Self-referential and cross-schema FKs are excluded.
+    """
     try:
         with _source_conn(connection_id) as conn, conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT DISTINCT cl.relname AS child, pr.relname AS parent
+                SELECT cl.relname AS child, pr.relname AS parent,
+                       (SELECT array_agg(a.attname ORDER BY x.ord)
+                          FROM unnest(k.conkey) WITH ORDINALITY AS x(attnum, ord)
+                          JOIN pg_attribute a
+                            ON a.attrelid = k.conrelid AND a.attnum = x.attnum) AS from_cols,
+                       (SELECT array_agg(a.attname ORDER BY x.ord)
+                          FROM unnest(k.confkey) WITH ORDINALITY AS x(attnum, ord)
+                          JOIN pg_attribute a
+                            ON a.attrelid = k.confrelid AND a.attnum = x.attnum) AS to_cols
                 FROM pg_constraint k
                 JOIN pg_class cl ON cl.oid = k.conrelid
                 JOIN pg_class pr ON pr.oid = k.confrelid
@@ -214,7 +225,11 @@ def fk_edges(connection_id: str, schema: str) -> list[dict]:
                 """,
                 (schema, schema),
             )
-            return [{"from": r[0], "to": r[1]} for r in cur.fetchall()]
+            return [
+                {"from": r[0], "to": r[1],
+                 "from_cols": list(r[2] or []), "to_cols": list(r[3] or [])}
+                for r in cur.fetchall()
+            ]
     except (psycopg.Error, OSError) as exc:
         raise RdbmsError(_clean_err(exc)) from exc
 

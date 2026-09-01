@@ -1,0 +1,53 @@
+{# Right-hand preview panel for one selected table in the table web. #}
+<div class="pnl-h">{{ schema }}.{{ table }}</div>
+
+<div class="pnl-stats">
+  <div class="pnl-stat"><div class="s-v">{{ (approx_rows | compact) if approx_rows is not none else '—' }}</div><div class="s-l">&approx; rows</div></div>
+  <div class="pnl-stat"><div class="s-v">{{ columns | length }}</div><div class="s-l">columns</div></div>
+  <div class="pnl-stat a"><div class="s-v">{{ fk_out | length }}</div><div class="s-l">fk out</div></div>
+  <div class="pnl-stat k"><div class="s-v">{{ fk_in | length }}</div><div class="s-l">fk in</div></div>
+</div>
+
+<div class="pnl-sec">Sample rows</div>
+<div class="pnl-sample">
+  <table>
+    <thead><tr>
+      {% for c in columns %}<th><span class="cn">{{ c.name }}</span><span class="ct">{{ c.data_type }}</span></th>{% endfor %}
+    </tr></thead>
+    <tbody>
+      {% for r in sample %}
+      <tr>{% for c in columns %}<td title="{{ r[c.name] }}">{{ r[c.name] }}</td>{% endfor %}</tr>
+      {% endfor %}
+      {% if not sample %}
+      <tr><td colspan="{{ columns | length or 1 }}" style="color:var(--text-faint)">table is empty — types shown from the schema</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+<div class="pnl-prov">SELECT * FROM {{ schema }}.{{ table }} LIMIT 6</div>
+<div class="pnl-note">Read-only sample · types are confirmed on the next screen.</div>
+
+{% if fk_out or fk_in %}
+<div class="pnl-sec" style="margin-top:16px">Linked tables</div>
+<div class="pnl-linked">
+  {% for l in fk_out %}
+  <button type="button" class="lk" data-select="{{ l.table }}">
+    <span class="dir out">OUT</span>
+    <span class="nm">{{ l.table }}</span>
+    <span class="via">{{ table }}.{{ l.cols | join(', ') }} &rarr; {{ l.table }}.{{ l.ref | join(', ') }}</span>
+  </button>
+  {% endfor %}
+  {% for l in fk_in %}
+  <button type="button" class="lk" data-select="{{ l.table }}">
+    <span class="dir in">IN</span>
+    <span class="nm">{{ l.table }}</span>
+    <span class="via">{{ l.table }}.{{ l.cols | join(', ') }} &rarr; {{ table }}.{{ l.ref | join(', ') }}</span>
+  </button>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="pnl-foot">
+  <a class="btn primary" href="/onboard/rdbms/{{ connection_id }}/{{ schema }}/{{ table }}/configure">Continue &rarr; preview &amp; configure</a>
+  <div class="fn">Creates <span class="mono">staging.{{ table }}</span> / <span class="mono">production.{{ table }}</span> on a later step.</div>
+</div>

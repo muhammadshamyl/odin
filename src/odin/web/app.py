@@ -602,10 +602,13 @@ def onboard_rdbms_test(
                        error=str(exc), elapsed=time.time() - t0)
     cid = rdbms.save_connection(p, server_version=info["server_version"],
                                 label=f"{host.strip()}/{database.strip()}")
+    typed = db_schema.strip()
+    direct = typed if any(s["schema"] == typed for s in info["schemas"]) else ""
     return _render(request, "_rdbms_test.html",
                    connection_id=cid, database=database.strip(),
                    server_short=_pg_version_short(info["server_version"]),
-                   n_schemas=len(info["schemas"]), elapsed=time.time() - t0)
+                   n_schemas=len(info["schemas"]), direct_schema=direct,
+                   elapsed=time.time() - t0)
 
 
 def _pg_version_short(v: str) -> str:
@@ -628,65 +631,55 @@ def onboard_rdbms_schemas(request: Request, connection_id: str):
                    connection_id=connection_id, meta=meta, schemas=info["schemas"])
 
 
-def _cobweb_layout(names: list[str], edges: list[dict],
-                   *, w: int = 960, h: int = 620) -> dict:
-    """Place `names` evenly on a circle and resolve each FK edge to a curve that
-    bows toward the centre — the 'web' look. Pure geometry, no physics."""
-    import math
-    cx, cy = w / 2, h / 2
-    n = max(len(names), 1)
-    r = min(max(120 + n * 6, 150), int(min(w, h) / 2) - 70)
-    pos = {}
-    nodes = []
-    for i, name in enumerate(names):
-        a = 2 * math.pi * i / n - math.pi / 2
-        x, y = cx + r * math.cos(a), cy + r * math.sin(a)
-        pos[name] = (x, y)
-        nodes.append({"name": name, "x": round(x, 1), "y": round(y, 1)})
-    curves = []
-    for e in edges:
-        if e["from"] in pos and e["to"] in pos:
-            x1, y1 = pos[e["from"]]
-            x2, y2 = pos[e["to"]]
-            # control point pulled 45% of the way to centre
-            qx = (x1 + x2) / 2 + (cx - (x1 + x2) / 2) * 0.55
-            qy = (y1 + y2) / 2 + (cy - (y1 + y2) / 2) * 0.55
-            curves.append({"from": e["from"], "to": e["to"],
-                           "d": f"M{x1:.1f} {y1:.1f} Q{qx:.1f} {qy:.1f} {x2:.1f} {y2:.1f}"})
-    return {"w": w, "h": h, "cx": cx, "cy": cy, "nodes": nodes, "curves": curves}
-
-
 @app.get("/onboard/rdbms/{connection_id}/{schema}/tables", response_class=HTMLResponse)
-def onboard_rdbms_tables(request: Request, connection_id: str, schema: str, q: str = ""):
-    """The FK 'cobweb' for one schema. `q` filters the drawn tables; the
-    `#web` block is what the filter box swaps."""
+def onboard_rdbms_tables(request: Request, connection_id: str, schema: str):
+    """The interactive table web for one schema — tables + FK edges are handed to
+    the client as JSON; the canvas lays them out, filters, and selects. The
+    right-hand preview panel is fetched per selection from `.../{table}/panel`."""
     meta = rdbms.connection_meta(connection_id)
     if meta is None:
         return _redirect("/onboard", msg="error: that connection expired — reconnect")
     try:
-        tables = rdbms.list_tables(connection_id, schema, q=q)
+        tables = rdbms.list_tables(connection_id, schema)
         edges = rdbms.fk_edges(connection_id, schema)
     except rdbms.RdbmsError as exc:
         return _redirect(f"/onboard/rdbms/{connection_id}/schemas",
                          msg=f"error: {exc}")
-    by_name = {t["name"]: t for t in tables}
-    layout = _cobweb_layout([t["name"] for t in tables], edges)
-    tmpl = "_rdbms_web.html" if _is_hx(request) else "rdbms_tables.html"
-    return _render(request, tmpl, connection_id=connection_id, meta=meta,
-                   schema=schema, q=q, tables=tables, table_meta=by_name,
-                   layout=layout, edge_count=len(layout["curves"]))
+    web = {
+        "cid": connection_id, "schema": schema,
+        "nodes": [{"name": t["name"], "rows": t["rows"], "cols": t["cols"]}
+                  for t in tables],
+        "edges": [{"from": e["from"], "to": e["to"],
+                   "fromCols": e["from_cols"], "toCols": e["to_cols"]}
+                  for e in edges],
+    }
+    return _render(request, "rdbms_tables.html", connection_id=connection_id,
+                   meta=meta, schema=schema, tables=tables, edges=edges,
+                   web_json=json.dumps(web, separators=(",", ":")))
 
 
-@app.get("/onboard/rdbms/{connection_id}/{schema}/{table}/peek",
+@app.get("/onboard/rdbms/{connection_id}/{schema}/{table}/panel",
          response_class=HTMLResponse)
-def onboard_rdbms_peek(request: Request, connection_id: str, schema: str, table: str):
+def onboard_rdbms_panel(request: Request, connection_id: str, schema: str, table: str):
+    """Right-hand preview panel for one selected table: ≈rows / columns / FK
+    in-out, a 6-row read-only sample, and the linked-tables list."""
+    if rdbms.connection_meta(connection_id) is None:
+        return HTMLResponse('<div class="sql-err">connection expired — reconnect</div>')
     try:
-        data = rdbms.peek(connection_id, schema, table)
+        cols = rdbms.columns(connection_id, schema, table)
+        _, sample = rdbms.sample_rows(connection_id, schema, table, limit=6)
+        edges = rdbms.fk_edges(connection_id, schema)
+        est = next((t["rows"] for t in rdbms.list_tables(connection_id, schema)
+                    if t["name"] == table), None)
     except rdbms.RdbmsError as exc:
-        return HTMLResponse(f'<div class="sql-err">{exc}</div>', status_code=200)
-    return _render(request, "_rdbms_peek.html", connection_id=connection_id,
-                   schema=schema, table=table, columns=data["columns"],
-                   rows=data["rows"])
+        return HTMLResponse(f'<div class="sql-err">{exc}</div>')
+    out = [{"table": e["to"], "cols": e["from_cols"], "ref": e["to_cols"]}
+           for e in edges if e["from"] == table]
+    inb = [{"table": e["from"], "cols": e["from_cols"], "ref": e["to_cols"]}
+           for e in edges if e["to"] == table]
+    return _render(request, "_rdbms_panel.html", connection_id=connection_id,
+                   schema=schema, table=table, columns=cols, sample=sample,
+                   approx_rows=est, fk_out=out, fk_in=inb)
 
 
 @app.get("/onboard/rdbms/{connection_id}/{schema}/{table}/configure",

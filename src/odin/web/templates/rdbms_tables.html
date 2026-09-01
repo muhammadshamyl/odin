@@ -1,28 +1,47 @@
 {% extends "base.html" %}
-{% block title %}Onboard — {{ schema }} tables{% endblock %}
+{% block title %}Onboard — {{ schema }} table web{% endblock %}
 {% block crumbs %}<a href="/">Operations Deck</a> <span style="opacity:.4">/</span> <a href="/onboard">Onboard Source</a> <span style="opacity:.4">/</span> <a href="/onboard/rdbms/{{ connection_id }}/schemas">{{ meta.database }}</a> <span style="opacity:.4">/</span> <b>{{ schema }}</b>{% endblock %}
 {% block body %}
 
 <div class="shead">
   <div class="no">02</div>
   <div>
-    <span class="eyebrow">Connect ✓ · pick schema ✓ · <b style="color:var(--text)">pick table</b> · preview &amp; types · create</span>
+    <span class="eyebrow">Connect ✓ · <b style="color:var(--text)">pick table</b> · configure · preview &amp; types · create</span>
     <h1>{{ schema }} — table web</h1>
-    <p class="sub">Every table in <span class="mono">{{ schema }}</span>; the threads are foreign keys between them. Click a table to preview it, then continue to configure the pull.</p>
+    <p class="sub">Every table in <span class="mono">{{ schema }}</span>; the threads are foreign keys between them. Scroll to zoom, drag to pan, click a table to preview it.</p>
   </div>
 </div>
 
-<div class="grid g-2-1" style="margin-top:16px; align-items:start">
-  <div class="card marked">
-    <div class="card-head"><h2>{{ tables|length }} tables</h2><div class="grow"></div>
-      <span class="mlabel">{{ edge_count }} foreign-key link{{ '' if edge_count == 1 else 's' }}</span></div>
-    <div id="web">{% include "_rdbms_web.html" %}</div>
+<div class="tweb">
+  <div class="tweb-graph">
+    <span class="tweb-corner"></span>
+    <div class="tweb-toolbar">
+      <span class="tw-count">{{ tables|length }} table{{ '' if tables|length == 1 else 's' }}</span>
+      <span class="tw-meta">{{ edges|length }} foreign-key link{{ '' if edges|length == 1 else 's' }}</span>
+      <input class="tw-filter" id="tw-filter" type="search" placeholder="filter tables…" autocomplete="off" spellcheck="false">
+      <button type="button" class="tw-showall" id="tw-showall" hidden></button>
+      <div class="segbar segbar-sm" role="radiogroup" aria-label="Layout">
+        <label class="seg"><input type="radio" name="tw-layout" value="web" checked><span>WEB</span></label>
+        <label class="seg"><input type="radio" name="tw-layout" value="ring"><span>RING</span></label>
+      </div>
+    </div>
+    <div class="tweb-stage">
+      <canvas class="tweb-canvas" id="tw-canvas"></canvas>
+      <div class="tweb-ov tweb-legend hide" id="tw-legend"></div>
+      <div class="tweb-ov tweb-hint" id="tw-hint">scroll = zoom · drag = pan</div>
+      <div class="tweb-ov tweb-zoom">
+        <span class="zx" id="tw-zx">100%</span>
+        <button type="button" id="tw-zout" aria-label="Zoom out">&minus;</button>
+        <button type="button" id="tw-zin" aria-label="Zoom in">+</button>
+        <button type="button" class="zfit" id="tw-fit">Fit</button>
+      </div>
+    </div>
   </div>
 
-  <div class="card marked">
-    <div class="card-head"><h2>Preview</h2></div>
-    <div id="peek">
-      <div class="empty"><div class="art">◎</div>Select a table in the web.</div>
+  <div class="tweb-panel" id="rdbms-panel">
+    <div class="pnl-empty">
+      <span class="ring"></span>
+      Select a table in the web.
     </div>
   </div>
 </div>
@@ -31,4 +50,7 @@
   <a class="btn ghost" href="/onboard/rdbms/{{ connection_id }}/schemas">&larr; change schema</a>
 </div>
 
+<script id="web-data" type="application/json">{{ web_json|safe }}</script>
 {% endblock %}
+
+{% block scripts %}<script src="/static/rdbms_web.js" defer></script>{% endblock %}

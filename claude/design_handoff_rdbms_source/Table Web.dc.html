@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap">
+<style>
+html,body{margin:0;height:100%;background:#090d14;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#e8eff7}
+a{color:#46c7f0;text-decoration:none}a:hover{color:#8adcf5}
+input,button{font-family:inherit}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#1f2e3e;border-radius:4px}::-webkit-scrollbar-track{background:transparent}
+@keyframes odinpulse{0%,100%{opacity:1}50%{opacity:.35}}
+</style>
+</helmet>
+
+<div style="display:flex;min-height:100vh;background:#090d14">
+
+  <aside style="width:246px;flex:none;border-right:1px solid #1f2e3e;background:#0b121b;display:flex;flex-direction:column">
+    <div style="padding:20px 20px 22px;border-bottom:1px solid #141d29;display:flex;align-items:center;gap:11px">
+      <span style="width:30px;height:30px;border:1px solid #46c7f0;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#46c7f0;font:600 13px 'IBM Plex Mono',monospace">◉</span>
+      <span style="font:600 15px 'Chakra Petch',sans-serif;letter-spacing:.16em;color:#e8eff7">ODIN·1</span>
+    </div>
+    <nav style="padding:20px 14px;display:flex;flex-direction:column;gap:4px">
+      <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#586d82;padding:0 8px 10px">CONSOLE</div>
+      <span style="padding:9px 12px;border-radius:4px;font:400 13px 'IBM Plex Sans',sans-serif;color:#93a6ba">Operations Deck</span>
+      <span style="padding:9px 12px;border-radius:4px;background:rgba(70,199,240,.1);border:1px solid rgba(70,199,240,.35);font:500 13px 'IBM Plex Sans',sans-serif;color:#46c7f0">＋ Onboard Source</span>
+      <span style="padding:9px 12px;border-radius:4px;font:400 13px 'IBM Plex Sans',sans-serif;color:#93a6ba">Pipeline Monitor</span>
+      <span style="padding:9px 12px;border-radius:4px;font:400 13px 'IBM Plex Sans',sans-serif;color:#93a6ba">SQL Console</span>
+      <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#586d82;padding:20px 8px 10px">DIVERSIONS</div>
+      <span style="padding:9px 12px;border-radius:4px;font:400 13px 'IBM Plex Sans',sans-serif;color:#93a6ba">Waiting Pipeline</span>
+      <span style="padding:9px 12px;border-radius:4px;font:400 13px 'IBM Plex Sans',sans-serif;color:#93a6ba">Quarantine</span>
+    </nav>
+    <div style="margin-top:auto;padding:16px 20px;border-top:1px solid #141d29;display:grid;grid-template-columns:1fr auto;gap:6px;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82">
+      <span>ENV</span><span style="color:#3fd08b">PROD</span><span>BUILD</span><span style="color:#93a6ba">SLICE-1</span>
+    </div>
+  </aside>
+
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 26px;border-bottom:1px solid #1f2e3e">
+      <div style="font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82">ODIN&nbsp; / &nbsp;OPERATIONS DECK&nbsp; / &nbsp;ONBOARD SOURCE&nbsp; / &nbsp;PFMEGRNARGS&nbsp; / &nbsp;<span style="color:#e8eff7">RNACEN</span></div>
+      <div style="display:flex;align-items:center;gap:16px;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82">
+        <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid #1f2e3e;border-radius:999px;padding:4px 10px;color:#3fd08b"><span style="width:6px;height:6px;border-radius:50%;background:#3fd08b"></span>PROD</span>
+        <span>LIVE</span><span style="color:#93a6ba">21:27:30 UTC</span>
+      </div>
+    </div>
+
+    <div style="padding:30px 26px 18px">
+      <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#46c7f0;margin-bottom:10px">— CONNECT ✓ · PICK SCHEMA ✓ · <span style="color:#e8eff7">PICK TABLE</span> · <span style="color:#586d82">PREVIEW &amp; TYPES · CREATE</span></div>
+      <div style="display:flex;gap:18px;align-items:flex-start">
+        <div style="font:700 40px 'Chakra Petch',sans-serif;color:#12202c;line-height:.85">02</div>
+        <div>
+          <h1 style="margin:0 0 8px;font:700 30px/1 'Chakra Petch',sans-serif;color:#e8eff7">rnacen — table web</h1>
+          <p style="margin:0;max-width:660px;font:400 13px/1.6 'IBM Plex Sans',sans-serif;color:#93a6ba;text-wrap:pretty">Every table in <span style="font-family:'IBM Plex Mono',monospace;color:#e8eff7">rnacen</span>; the threads are foreign keys between them. Scroll to zoom, drag to pan, click a table to preview it.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1;display:flex;flex-wrap:wrap;gap:18px;padding:0 26px 26px;align-items:stretch">
+
+      <div style="flex:5 1 560px;min-width:0;position:relative;background:#0f1722;border:1px solid #1f2e3e;border-radius:6px;display:flex;flex-direction:column;min-height:660px;overflow:hidden">
+        <div style="position:absolute;top:0;left:0;width:14px;height:1px;background:#46c7f0;z-index:3"></div>
+        <div style="position:absolute;top:0;left:0;width:1px;height:14px;background:#46c7f0;z-index:3"></div>
+
+        <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid #141d29;flex-wrap:wrap">
+          <div style="font:600 14px 'Chakra Petch',sans-serif;color:#e8eff7">186 tables</div>
+          <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82">400 FOREIGN-KEY LINKS</div>
+          <input placeholder="filter tables…" onInput="{{ onFilter }}" style="flex:1;min-width:170px;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:8px 11px;font:400 12.5px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none" style-focus="border-color:#46c7f0;box-shadow:0 0 0 3px rgba(70,199,240,.14)">
+          <div style="display:inline-flex;border:1px solid #1f2e3e;border-radius:4px;overflow:hidden;flex:none">
+            <button onClick="{{ setWeb }}" style="{{ webBtn }}">WEB</button>
+            <button onClick="{{ setRing }}" style="{{ ringBtn }}">RING</button>
+            <button onClick="{{ setGrid }}" style="{{ gridBtn }}">CLUSTERS</button>
+          </div>
+        </div>
+
+        <div style="position:relative;flex:1;min-height:0">
+          <canvas ref="{{ canvasRef }}" onMouseMove="{{ onMove }}" onMouseDown="{{ onDown }}" onMouseUp="{{ onUp }}" onMouseLeave="{{ onUp }}" onWheel="{{ onWheel }}" onClick="{{ onClick }}" style="position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab"></canvas>
+
+          <div style="{{ legendStyle }}">
+            <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#586d82;margin-bottom:1px">CLUSTERS</div>
+            <sc-for list="{{ legend }}" as="c" hint-placeholder-count="6">
+              <div style="display:flex;align-items:center;gap:8px;font:400 11px 'IBM Plex Mono',monospace;color:#93a6ba"><span style="width:8px;height:8px;border-radius:2px;background:{{ c.color }}"></span>{{ c.label }} <span style="color:#586d82">{{ c.n }}</span></div>
+            </sc-for>
+          </div>
+
+          <div style="position:absolute;right:14px;bottom:14px;display:flex;align-items:center;gap:8px">
+            <span style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;background:rgba(11,18,27,.82);border:1px solid #1f2e3e;border-radius:4px;padding:7px 9px">{{ zoomLabel }}</span>
+            <button onClick="{{ zoomOut }}" style="width:30px;height:30px;background:rgba(11,18,27,.82);border:1px solid #1f2e3e;border-radius:4px;color:#93a6ba;font:500 14px 'IBM Plex Mono',monospace;cursor:pointer" style-hover="border-color:#46c7f0;color:#46c7f0">−</button>
+            <button onClick="{{ zoomIn }}" style="width:30px;height:30px;background:rgba(11,18,27,.82);border:1px solid #1f2e3e;border-radius:4px;color:#93a6ba;font:500 14px 'IBM Plex Mono',monospace;cursor:pointer" style-hover="border-color:#46c7f0;color:#46c7f0">+</button>
+            <button onClick="{{ fit }}" style="height:30px;padding:0 11px;background:rgba(11,18,27,.82);border:1px solid #1f2e3e;border-radius:4px;color:#93a6ba;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;cursor:pointer" style-hover="border-color:#46c7f0;color:#46c7f0">FIT</button>
+          </div>
+
+          <div style="position:absolute;right:14px;top:14px;font:400 10.5px 'IBM Plex Mono',monospace;color:#586d82;background:rgba(11,18,27,.82);border:1px solid #1f2e3e;border-radius:4px;padding:7px 10px">{{ hint }}</div>
+        </div>
+      </div>
+
+      <div style="flex:1 1 320px;max-width:560px;position:relative;background:#0f1722;border:1px solid #1f2e3e;border-radius:6px;padding:18px 20px 20px;display:flex;flex-direction:column;min-height:0">
+        <div style="position:absolute;top:0;left:0;width:14px;height:1px;background:#46c7f0"></div>
+        <div style="position:absolute;top:0;left:0;width:1px;height:14px;background:#46c7f0"></div>
+        <div style="font:600 15px 'Chakra Petch',sans-serif;color:#e8eff7;margin-bottom:14px">Preview</div>
+
+        <sc-if value="{{ noSelection }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#586d82">
+            <span style="width:46px;height:46px;border:1px solid #1f2e3e;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#1f2e3e;font-size:20px">◎</span>
+            <span style="font:400 12.5px 'IBM Plex Sans',sans-serif">Select a table in the web.</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:16px;min-height:0">
+            <div>
+              <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:6px">SCHEMA.TABLE</div>
+              <div style="font:500 14px 'IBM Plex Mono',monospace;color:#e8eff7;word-break:break-all">{{ selName }}</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div style="border:1px solid #1f2e3e;border-radius:4px;background:#0b121b;padding:10px 11px"><div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:5px">≈ ROWS</div><div style="font:400 13px 'IBM Plex Mono',monospace;color:#e8eff7">{{ selRows }}</div></div>
+              <div style="border:1px solid #1f2e3e;border-radius:4px;background:#0b121b;padding:10px 11px"><div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:5px">COLUMNS</div><div style="font:400 13px 'IBM Plex Mono',monospace;color:#e8eff7">{{ selCols }}</div></div>
+              <div style="border:1px solid #1f2e3e;border-radius:4px;background:#0b121b;padding:10px 11px"><div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:5px">FK OUT</div><div style="font:400 13px 'IBM Plex Mono',monospace;color:#46c7f0">{{ selOut }}</div></div>
+              <div style="border:1px solid #1f2e3e;border-radius:4px;background:#0b121b;padding:10px 11px"><div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:5px">FK IN</div><div style="font:400 13px 'IBM Plex Mono',monospace;color:#3fd08b">{{ selIn }}</div></div>
+            </div>
+            <div style="display:flex;flex-direction:column">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px">
+                <span style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82">SAMPLE ROWS</span>
+                <span style="font:400 10px 'IBM Plex Mono',monospace;color:#586d82;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ sampleNote }}</span>
+              </div>
+              <div style="border:1px solid #1f2e3e;border-radius:4px;background:#0b121b;overflow:auto;max-height:190px">
+                <div style="display:flex;flex-direction:column;min-width:max-content">
+                  <div style="display:flex;gap:0;border-bottom:1px solid #1f2e3e;position:sticky;top:0;background:#0b121b">
+                    <sc-for list="{{ sampleCols }}" as="c" hint-placeholder-count="6">
+                      <div style="flex:none;min-width:104px;padding:7px 10px;border-right:1px solid #141d29">
+                        <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#93a6ba;white-space:nowrap">{{ c.name }}</div>
+                        <div style="font:400 9px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#586d82;margin-top:2px">{{ c.type }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <sc-for list="{{ sampleRows }}" as="r" hint-placeholder-count="6">
+                    <div style="display:flex;border-bottom:1px solid #141d29">
+                      <sc-for list="{{ r.cells }}" as="cell" hint-placeholder-count="6">
+                        <div style="flex:none;min-width:104px;max-width:190px;padding:7px 10px;border-right:1px solid #141d29;font:400 11px 'IBM Plex Mono',monospace;color:#c8dae9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ cell.v }}</div>
+                      </sc-for>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="font:400 10px 'IBM Plex Mono',monospace;color:#586d82;margin-top:6px">Read-only sample · types are confirmed on the next screen.</div>
+            </div>
+
+            <div style="min-height:0;display:flex;flex-direction:column">
+              <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">LINKED TABLES</div>
+              <div style="border:1px solid #1f2e3e;border-radius:4px;background:#0b121b;max-height:150px;overflow:auto">
+                <sc-for list="{{ neighbours }}" as="n" hint-placeholder-count="5">
+                  <div onClick="{{ n.select }}" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 11px;border-bottom:1px solid #141d29;font:400 11.5px 'IBM Plex Mono',monospace;color:#93a6ba;cursor:pointer" style-hover="background:rgba(70,199,240,.08);color:#e8eff7">
+                    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ n.name }}</span>
+                    <span style="flex:none;font-size:10px;letter-spacing:.1em;color:{{ n.dirColor }}">{{ n.dir }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:9px;padding-top:14px;border-top:1px solid #141d29">
+              <button style="background:#46c7f0;color:#062230;border:1px solid #46c7f0;border-radius:4px;padding:11px 14px;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;cursor:pointer;text-align:left" style-hover="background:#66d4f6">CONTINUE → PREVIEW &amp; CONFIGURE</button>
+              <div style="font:400 10.5px/1.5 'IBM Plex Mono',monospace;color:#586d82">Creates staging.{{ selShort }} / production.{{ selShort }} on the next screen.</div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+class Component extends DCLogic {
+  constructor(p){
+    super(p);
+    this.state = { layout:'web', filter:'', sel:null, zoom:1, hover:null, tick:0 };
+    this.canvasRef = React.createRef();
+    this.view = { k:1, x:0, y:0 };
+    this.drag = null;
+    this.build();
+  }
+
+  rnd(){ this.seed = (this.seed*1664525 + 1013904223) % 4294967296; return this.seed/4294967296; }
+
+  build(){
+    this.seed = 20260902;
+    const C = [
+      {key:'xref', label:'xref partitions', color:'#46c7f0'},
+      {key:'rnc', label:'rnc core', color:'#3fd08b'},
+      {key:'rfam', label:'rfam / models', color:'#6aa8ff'},
+      {key:'pipe', label:'pipeline / precomputed', color:'#f2b445'},
+      {key:'lit', label:'literature / ontology', color:'#93a6ba'},
+      {key:'ops', label:'ops / audit', color:'#ff6f6b'}
+    ];
+    this.clusters = C;
+    const nodes = [];
+    const add = (name, ck, rows, cols) => nodes.push({ id:nodes.length, name, c:ck, rows, cols, deg:0, x:0, y:0, vx:0, vy:0 });
+
+    add('xref', 0, 62_400_112, 14);
+    for (let p=1;p<=30;p++){ add('xref_p'+p+'_not_deleted', 0, 400000+Math.floor(this.rnd()*3_000_000), 12); add('xref_p'+p+'_deleted', 0, 20000+Math.floor(this.rnd()*400000), 12); }
+    const rnc = ['rnc_accessions','rnc_accession_active','rnc_accession_sequence_f','rnc_accession_sequence_r','rnc_chemical_components','rnc_database','rnc_database_json_stats','rnc_database_references','rnc_feedback_overlap','rnc_feedback_target_asse','rnc_gene_status','rnc_import_tracker','rnc_interactions','rnc_locus','rnc_locus_members','rnc_modifications','rnc_reference_map','rnc_references','rnc_related_sequences','rnc_relationship_types','rnc_release','rnc_rna_precomputed','rnc_secondary_structure','rnc_sequence_exons','rnc_sequence_features','rnc_sequence_feature_typ','rnc_sequence_regions','rnc_taxonomy','rna','rna_alt_ids','rna_precomputed_qa','sequence_regions','sequence_region_uk_count','validate_layout_hits'];
+    rnc.forEach(n=>add(n,1,5000+Math.floor(this.rnd()*20_000_000),6+Math.floor(this.rnd()*16)));
+    const rfam = ['rfam_analyzed_sequences','rfam_clans','rfam_go_terms','rfam_model_hits','rfam_models','r2dt_results','r2dt_models','r2dt_model_extra_data','r2dt_models_backup','release_stats','qa_status','gtrnadb_hits','crs_features','ensembl_assembly','ensembl_coordinate_system','ensembl_karyotype','ensembl_pseudogene_exons','ensembl_pseudogene_region'];
+    rfam.forEach(n=>add(n,2,1000+Math.floor(this.rnd()*3_000_000),4+Math.floor(this.rnd()*12)));
+    const pipe = ['pipeline_task','pipeline_task_run','pipeline_task_travel','pipeline_matches_genome','pipeline_matches_gtf','pipeline_lock','precomputed_qrs','precomputed_qrs_accession','precomputed_qrs_taxid','precompute_chunk','precompute_chunk_upi','load_rnacentral','load_rnacentral_all','load_retro_tmp','load_md5_new','load_md5_stats','load_accession','load_release','load_xref','job_queue','job_attempt','job_artifact'];
+    pipe.forEach(n=>add(n,3,500+Math.floor(this.rnd()*8_000_000),4+Math.floor(this.rnd()*14)));
+    const lit = ['litscan_article','litscan_body_sentence','litscan_database','litscan_job','litscan_result','litscan_statistics','litsumm_summaries','protein_info','publications','ontology_terms','go_term_annotations','go_term_publication_map','ensembl_gene','ensembl_transcript','ensembl_exon','ontology_closure','taxonomy_node','taxonomy_name','term_synonym','term_xref'];
+    lit.forEach(n=>add(n,4,200+Math.floor(this.rnd()*900000),3+Math.floor(this.rnd()*10)));
+    const ops = ['auth_user','auth_group','auth_permission','django_session','django_migrations','django_content_type','audit_log','audit_change','api_key','api_request_log','feature_flag','search_index_state','search_query_log','export_job','export_artifact','healthcheck','node_registry','slice_assignment'];
+    ops.forEach(n=>add(n,5,50+Math.floor(this.rnd()*80000),3+Math.floor(this.rnd()*9)));
+
+    this.nodes = nodes;
+    const hubs = [0, nodes.findIndex(n=>n.name==='rnc_accessions'), nodes.findIndex(n=>n.name==='rfam_models'), nodes.findIndex(n=>n.name==='pipeline_task'), nodes.findIndex(n=>n.name==='publications'), nodes.findIndex(n=>n.name==='auth_user')];
+    const links = [], seen = new Set();
+    const link = (a,b)=>{ if(a===b) return; const k=a<b?a+':'+b:b+':'+a; if(seen.has(k)) return; seen.add(k); links.push({a,b}); nodes[a].deg++; nodes[b].deg++; };
+    nodes.forEach(n=>{ if(!hubs.includes(n.id)) link(n.id, hubs[n.c]); });
+    const rnaId = nodes.findIndex(n=>n.name==='rna');
+    for(let i=0;i<150;i++){
+      const a = nodes[Math.floor(this.rnd()*nodes.length)].id;
+      const pool = this.rnd()<0.45 ? [rnaId, hubs[1], hubs[0]] : null;
+      const b = pool ? pool[Math.floor(this.rnd()*pool.length)] : nodes[Math.floor(this.rnd()*nodes.length)].id;
+      link(a,b);
+    }
+    this.links = links;
+    this.adj = nodes.map(()=>[]);
+    links.forEach((l,i)=>{ this.adj[l.a].push({o:l.b,dir:'OUT',i}); this.adj[l.b].push({o:l.a,dir:'IN',i}); });
+
+    this.layouts = { web:this.layoutWeb(), ring:this.layoutRing(), grid:this.layoutGrid() };
+    const L = this.layouts.web;
+    nodes.forEach(n=>{ n.x = L[n.id].x; n.y = L[n.id].y; });
+  }
+
+  layoutRing(){
+    const order = this.nodes.slice().sort((a,b)=> a.c-b.c || a.name.localeCompare(b.name));
+    const pos = [], R = 430, gapEvery = order.length;
+    order.forEach((n,i)=>{ const t = (i/gapEvery)*Math.PI*2 - Math.PI/2; pos[n.id] = { x:Math.cos(t)*R, y:Math.sin(t)*R, a:t }; });
+    return pos;
+  }
+
+  layoutGrid(){
+    const pos = [], per = 6, R = 470;
+    this.clusters.forEach((c,ci)=>{
+      const members = this.nodes.filter(n=>n.c===ci);
+      const ang = (ci/this.clusters.length)*Math.PI*2 - Math.PI/2;
+      const cx = Math.cos(ang)*R, cy = Math.sin(ang)*R*0.82;
+      const cols = Math.ceil(Math.sqrt(members.length*1.3));
+      members.forEach((n,i)=>{ const gx=(i%cols)-(cols-1)/2, gy=Math.floor(i/cols)-(Math.ceil(members.length/cols)-1)/2; pos[n.id]={x:cx+gx*30,y:cy+gy*26}; });
+    });
+    return pos;
+  }
+
+  layoutWeb(){
+    const N = this.nodes, L = this.links, n = N.length;
+    const px = new Float64Array(n), py = new Float64Array(n), vx = new Float64Array(n), vy = new Float64Array(n);
+    const anchors = this.clusters.map((c,i)=>{ const a=(i/this.clusters.length)*Math.PI*2; return {x:Math.cos(a)*400, y:Math.sin(a)*340}; });
+    N.forEach((nd,i)=>{ const a=anchors[nd.c]; px[i]=a.x+(this.rnd()-.5)*180; py[i]=a.y+(this.rnd()-.5)*180; });
+    for(let it=0; it<420; it++){
+      const alpha = 1 - it/420;
+      for(let i=0;i<n;i++){
+        for(let j=i+1;j<n;j++){
+          let dx=px[j]-px[i], dy=py[j]-py[i]; let d2=dx*dx+dy*dy;
+          if(d2>90000||d2===0) continue;
+          const d=Math.sqrt(d2), f=1600/d2;
+          const ux=dx/d*f, uy=dy/d*f;
+          vx[i]-=ux; vy[i]-=uy; vx[j]+=ux; vy[j]+=uy;
+        }
+      }
+      for(const l of L){
+        let dx=px[l.b]-px[l.a], dy=py[l.b]-py[l.a];
+        const d=Math.hypot(dx,dy)||1, f=(d-64)*0.035;
+        const ux=dx/d*f, uy=dy/d*f;
+        vx[l.a]+=ux; vy[l.a]+=uy; vx[l.b]-=ux; vy[l.b]-=uy;
+      }
+      for(let i=0;i<n;i++){
+        const a=anchors[N[i].c];
+        vx[i]+=(a.x-px[i])*0.014; vy[i]+=(a.y-py[i])*0.014;
+        vx[i]-=px[i]*0.002; vy[i]-=py[i]*0.002;
+        px[i]+=vx[i]*alpha*0.9; py[i]+=vy[i]*alpha*0.9;
+        vx[i]*=0.82; vy[i]*=0.82;
+      }
+    }
+    let cx=0, cy=0; for(let i=0;i<n;i++){ cx+=px[i]/n; cy+=py[i]/n; }
+    const rad=[]; for(let i=0;i<n;i++) rad.push(Math.hypot(px[i]-cx, py[i]-cy));
+    const r92 = rad.slice().sort((a,b)=>a-b)[Math.floor(n*0.92)] || 1;
+    const s = 470/r92, cap = r92*1.25;
+    const pos=[];
+    for(let i=0;i<n;i++){
+      let dx=px[i]-cx, dy=py[i]-cy; const r=Math.hypot(dx,dy)||1;
+      if(r>cap){ dx*=cap/r; dy*=cap/r; }
+      pos[i]={x:dx*s, y:dy*s};
+    }
+    return pos;
+  }
+
+  sample(node){
+    let s = (node.id+7)*2654435761 % 4294967296;
+    const R = () => (s = (s*1664525+1013904223) % 4294967296) / 4294967296;
+    const pools = [
+      [['id','int8'],['upi','text'],['ac','text'],['taxid','int4'],['deleted','bool'],['timestamp','timestamptz']],
+      [['id','int8'],['upi','text'],['accession','text'],['database','text'],['len','int4'],['updated_at','timestamptz']],
+      [['id','int8'],['model_id','text'],['clan','text'],['score','float8'],['e_value','float8'],['created_at','timestamptz']],
+      [['id','int8'],['task','text'],['state','text'],['attempts','int4'],['started_at','timestamptz'],['finished_at','timestamptz']],
+      [['id','int8'],['pmid','text'],['title','text'],['journal','text'],['year','int4'],['created_at','timestamptz']],
+      [['id','int8'],['actor','text'],['action','text'],['ok','bool'],['ms','int4'],['created_at','timestamptz']]
+    ];
+    const cols = pools[node.c];
+    const words = ['URS0000A7635A','URS00003F07BD','ENSG00000229807','MIR1302-2HG','SNORD3A','RF00005','tRNA-Leu','RNU6-2','LINC01128','AL627309.1'];
+    const dbs = ['ENA','ENSEMBL','RFAM','GTRNADB','SILVA','PDBE'];
+    const states = ['done','running','queued','failed'];
+    const rows = [];
+    for(let r=0;r<6;r++){
+      rows.push({ id:'r'+r, cells: cols.map(([n,t],ci)=>{
+        let v;
+        if(n==='id') v = String(4820001 + r*7 + Math.floor(R()*40));
+        else if(t==='bool') v = R()<0.25 ? 'true':'false';
+        else if(t==='int4') v = String(Math.floor(R()*9000)+9);
+        else if(t==='int8') v = String(Math.floor(R()*8_000_000));
+        else if(t==='float8') v = (R()*100).toFixed(3);
+        else if(t==='timestamptz') v = '2026-0'+(1+Math.floor(R()*8))+'-'+String(2+Math.floor(R()*26)).padStart(2,'0')+' '+String(Math.floor(R()*24)).padStart(2,'0')+':'+String(Math.floor(R()*60)).padStart(2,'0');
+        else if(n==='database') v = dbs[Math.floor(R()*dbs.length)];
+        else if(n==='state') v = states[Math.floor(R()*states.length)];
+        else if(n==='task') v = ['precompute','xref-load','r2dt','litscan'][Math.floor(R()*4)];
+        else if(n==='journal') v = ['Nucleic Acids Res','RNA','Bioinformatics'][Math.floor(R()*3)];
+        else if(n==='title') v = ['Structural survey of…','A census of ncRNA…','Genome-wide mapping…'][Math.floor(R()*3)];
+        else if(n==='action') v = ['read','introspect','export'][Math.floor(R()*3)];
+        else if(n==='actor') v = ['odin_reader','svc_pipeline','m.dey'][Math.floor(R()*3)];
+        else v = words[Math.floor(R()*words.length)];
+        return { v, num: t!=='text' };
+      })});
+    }
+    return { cols: cols.map(([n,t])=>({name:n,type:t})), rows };
+  }
+
+  componentDidMount(){
+    const cv = this.canvasRef.current; if(!cv) return;
+    this.ro = new ResizeObserver(()=>this.resize()); this.ro.observe(cv.parentElement);
+    this.resize(); this.fitView();
+    this.t0 = performance.now();
+    const loop = () => { this.frame = requestAnimationFrame(loop); this.step(); };
+    this.frame = requestAnimationFrame(loop);
+  }
+  componentWillUnmount(){ cancelAnimationFrame(this.frame); if(this.ro) this.ro.disconnect(); }
+
+  resize(){
+    const cv=this.canvasRef.current; if(!cv) return;
+    const r=cv.parentElement.getBoundingClientRect(), dpr=Math.min(devicePixelRatio||1,2);
+    cv.width=Math.max(1,r.width*dpr); cv.height=Math.max(1,r.height*dpr); this.W=r.width; this.H=r.height; this.dpr=dpr;
+    if(this.W>10 && this.H>10 && this._fitW!==this.W) { this._fitW=this.W; this.fitView(); }
+    const narrow = this.W < 520;
+    if(narrow !== this.state.narrow) this.setState({narrow});
+  }
+
+  fitView(){
+    let minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;
+    const L=this.layouts[this.state.layout];
+    L.forEach(p=>{ minx=Math.min(minx,p.x);maxx=Math.max(maxx,p.x);miny=Math.min(miny,p.y);maxy=Math.max(maxy,p.y); });
+    const pad=70, k=Math.min((this.W-pad*2)/(maxx-minx), (this.H-pad*2)/(maxy-miny));
+    this.view.k=k; this.view.x=this.W/2-((minx+maxx)/2)*k; this.view.y=this.H/2-((miny+maxy)/2)*k;
+    this.setState({zoom:k});
+  }
+
+  step(){
+    const L=this.layouts[this.state.layout];
+    let moving=false;
+    for(const n of this.nodes){ const t=L[n.id]; const dx=t.x-n.x, dy=t.y-n.y; if(Math.abs(dx)>0.05||Math.abs(dy)>0.05){ n.x+=dx*0.12; n.y+=dy*0.12; moving=true; } else { n.x=t.x; n.y=t.y; } }
+    this.draw(moving);
+  }
+
+  cluster(i){ return this.clusters[i].color; }
+
+  draw(){
+    const cv=this.canvasRef.current; if(!cv) return;
+    const ctx=cv.getContext('2d'); const {k,x,y}=this.view; const W=this.W,H=this.H;
+    const now=(performance.now()-this.t0)/1000;
+    ctx.setTransform(this.dpr,0,0,this.dpr,0,0);
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#0b121b'; ctx.fillRect(0,0,W,H);
+
+    const g=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*0.62);
+    g.addColorStop(0,'rgba(70,199,240,0.07)'); g.addColorStop(1,'rgba(9,13,20,0)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+    ctx.strokeStyle='rgba(31,46,62,0.42)'; ctx.lineWidth=1;
+    const gs=44*Math.max(k,0.35);
+    ctx.beginPath();
+    for(let gx=(x%gs+gs)%gs; gx<W; gx+=gs){ ctx.moveTo(Math.round(gx)+.5,0); ctx.lineTo(Math.round(gx)+.5,H); }
+    for(let gy=(y%gs+gs)%gs; gy<H; gy+=gs){ ctx.moveTo(0,Math.round(gy)+.5); ctx.lineTo(W,Math.round(gy)+.5); }
+    ctx.stroke();
+
+    const sx=n=>n.x*k+x, sy=n=>n.y*k+y;
+    const f=(this.state.filter||'').trim().toLowerCase();
+    const sel=this.state.sel, hov=this.state.hover;
+    const focus = sel!=null ? sel : hov;
+    const near = new Set();
+    if(focus!=null){ near.add(focus); this.adj[focus].forEach(a=>near.add(a.o)); }
+    const bundle = this.state.layout==='ring' ? 0.86 : 0.28;
+
+    ctx.lineCap='round';
+    for(let i=0;i<this.links.length;i++){
+      const l=this.links[i], A=this.nodes[l.a], B=this.nodes[l.b];
+      const ax=sx(A),ay=sy(A),bx=sx(B),by=sy(B);
+      if((ax<-200&&bx<-200)||(ax>W+200&&bx>W+200)||(ay<-200&&by<-200)||(ay>H+200&&by>H+200)) continue;
+      const hot = focus!=null && (l.a===focus||l.b===focus);
+      const cx=(ax+bx)/2, cy=(ay+by)/2;
+      const mx=cx+((W/2+ (0))-cx)*bundle*0.9, my=cy+((H/2)-cy)*bundle*0.9;
+      ctx.beginPath(); ctx.moveTo(ax,ay); ctx.quadraticCurveTo(mx,my,bx,by);
+      if(hot){ ctx.strokeStyle='rgba(70,199,240,0.85)'; ctx.lineWidth=1.4; ctx.shadowColor='rgba(70,199,240,0.6)'; ctx.shadowBlur=8; }
+      else { ctx.strokeStyle = focus!=null ? 'rgba(88,109,130,0.10)' : 'rgba(126,168,199,'+(0.26+0.09*Math.sin(now*0.7+i))+')'; ctx.lineWidth=0.8; ctx.shadowBlur=0; }
+      ctx.stroke(); ctx.shadowBlur=0;
+    }
+
+    if(focus==null){
+      for(let p=0;p<16;p++){
+        const l=this.links[(p*37)%this.links.length], A=this.nodes[l.a], B=this.nodes[l.b];
+        const t=((now*0.24+p/16)%1);
+        const ax=sx(A),ay=sy(A),bx=sx(B),by=sy(B);
+        const cx=(ax+bx)/2, cy=(ay+by)/2, mx=cx+(W/2-cx)*bundle*0.9, my=cy+(H/2-cy)*bundle*0.9;
+        const u=1-t, px=u*u*ax+2*u*t*mx+t*t*bx, py=u*u*ay+2*u*t*my+t*t*by;
+        ctx.beginPath(); ctx.arc(px,py,1.7,0,6.283);
+        ctx.fillStyle='rgba(70,199,240,'+(0.75*Math.sin(Math.PI*t))+')'; ctx.fill();
+      }
+    }
+
+    const labels=[];
+    for(const n of this.nodes){
+      const px=sx(n), py=sy(n);
+      if(px<-40||px>W+40||py<-40||py>H+40) continue;
+      const match = f ? n.name.includes(f) : true;
+      const dim = (focus!=null && !near.has(n.id)) || !match;
+      const r = Math.max(2.1, Math.min(9, 1.6+Math.log10(n.rows+10)*0.72 + n.deg*0.14)) * Math.min(1.6,Math.max(0.75,k*1.1));
+      const col=this.cluster(n.c);
+      if(!dim && (n.deg>6 || n.id===focus || (f&&match))){
+        ctx.beginPath(); ctx.arc(px,py,r*2.6,0,6.283);
+        const rg=ctx.createRadialGradient(px,py,0,px,py,r*2.6);
+        rg.addColorStop(0, col+'55'); rg.addColorStop(1, col+'00');
+        ctx.fillStyle=rg; ctx.fill();
+      }
+      ctx.beginPath(); ctx.arc(px,py,r,0,6.283);
+      ctx.fillStyle = dim ? 'rgba(40,56,72,0.75)' : col; ctx.fill();
+      if(n.id===focus){
+        const pr = r+5+Math.sin(now*3)*1.6;
+        ctx.beginPath(); ctx.arc(px,py,pr,0,6.283); ctx.strokeStyle='#46c7f0'; ctx.lineWidth=1.4; ctx.stroke();
+      } else if(!dim){ ctx.strokeStyle='rgba(9,13,20,0.85)'; ctx.lineWidth=1; ctx.stroke(); }
+      const show = n.id===focus || (focus!=null&&near.has(n.id)&&k>0.5) || (f&&match) || (focus==null&&!f&&(k>1.5||n.deg>9));
+      if(show && !dim) labels.push({px,py,r,name:n.name,col, strong:n.id===focus, left:this.state.layout==='ring'&&n.x<-20});
+    }
+
+    ctx.font="500 11px 'IBM Plex Mono', monospace"; ctx.textBaseline='middle';
+    const legendBox = this.state.narrow ? null : {x0:0, x1:250, y0:H-210, y1:H};
+    const ctrlBox = {x0:W-230, x1:W, y0:H-52, y1:H};
+    for(const l of labels.slice(0,220)){
+      if(!l.strong){
+        const hit = b => b && l.px+90 > b.x0 && l.px-90 < b.x1 && l.py+8 > b.y0 && l.py-8 < b.y1;
+        if(hit(legendBox) || hit(ctrlBox)) continue;
+      }
+      const w=ctx.measureText(l.name).width;
+      const tx = l.left ? l.px-l.r-8-w : l.px+l.r+8;
+      ctx.fillStyle='rgba(9,13,20,0.72)'; ctx.fillRect(tx-3, l.py-7, w+7, 14);
+      ctx.fillStyle = l.strong ? '#e8eff7' : 'rgba(200,218,233,0.82)';
+      ctx.fillText(l.name, tx, l.py);
+    }
+  }
+
+  toWorld(e){
+    const r=this.canvasRef.current.getBoundingClientRect();
+    return { x:(e.clientX-r.left-this.view.x)/this.view.k, y:(e.clientY-r.top-this.view.y)/this.view.k, sx:e.clientX-r.left, sy:e.clientY-r.top };
+  }
+  pick(e){
+    const p=this.toWorld(e); let best=null, bd=Infinity;
+    for(const n of this.nodes){ const d=(n.x-p.x)**2+(n.y-p.y)**2; if(d<bd){bd=d;best=n;} }
+    return (bd < (16/this.view.k)**2) ? best.id : null;
+  }
+
+  renderVals(){
+    const st=this.state, sel=st.sel!=null?this.nodes[st.sel]:null;
+    const btn = on => "padding:8px 12px;background:"+(on?'#12202c':'transparent')+";color:"+(on?'#46c7f0':'#586d82')+";border:0;border-right:1px solid #1f2e3e;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;cursor:pointer";
+    const fmt = v => v.toLocaleString('en-US').replace(/,/g,' ');
+    const setL = l => () => { this.setState({layout:l}, ()=>this.fitView()); };
+    const zoomBy = m => () => { const cx=this.W/2, cy=this.H/2; const wx=(cx-this.view.x)/this.view.k, wy=(cy-this.view.y)/this.view.k; this.view.k=Math.max(0.15,Math.min(9,this.view.k*m)); this.view.x=cx-wx*this.view.k; this.view.y=cy-wy*this.view.k; this.setState({zoom:this.view.k}); };
+    return {
+      canvasRef:this.canvasRef,
+      legend: st.narrow ? [] : this.clusters.map((c,i)=>({...c, n:this.nodes.filter(n=>n.c===i).length})),
+      legendStyle: st.narrow ? 'display:none' : 'position:absolute;left:14px;bottom:14px;display:flex;flex-direction:column;gap:7px;background:rgba(11,18,27,.86);border:1px solid #1f2e3e;border-radius:4px;padding:11px 12px;backdrop-filter:blur(6px)',
+      webBtn:btn(st.layout==='web'), ringBtn:btn(st.layout==='ring'), gridBtn:btn(st.layout==='grid')+';border-right:0',
+      setWeb:setL('web'), setRing:setL('ring'), setGrid:setL('grid'),
+      zoomIn:zoomBy(1.35), zoomOut:zoomBy(1/1.35), fit:()=>this.fitView(),
+      zoomLabel:Math.round(st.zoom*100)+'%',
+      hint: st.sel!=null ? 'CLICK EMPTY SPACE TO CLEAR' : 'SCROLL = ZOOM · DRAG = PAN',
+      onFilter:e=>this.setState({filter:e.target.value}),
+      onWheel:e=>{ e.preventDefault(); const p=this.toWorld(e); const m=Math.exp(-e.deltaY*0.0016); const k=Math.max(0.15,Math.min(9,this.view.k*m)); this.view.x=p.sx-p.x*k; this.view.y=p.sy-p.y*k; this.view.k=k; this.setState({zoom:k}); },
+      onDown:e=>{ this.drag={x:e.clientX,y:e.clientY,vx:this.view.x,vy:this.view.y,moved:false}; e.currentTarget.style.cursor='grabbing'; },
+      onUp:e=>{ this.drag=null; if(e.currentTarget) e.currentTarget.style.cursor='grab'; },
+      onMove:e=>{ if(this.drag){ const dx=e.clientX-this.drag.x, dy=e.clientY-this.drag.y; if(Math.abs(dx)+Math.abs(dy)>3) this.drag.moved=true; this.view.x=this.drag.vx+dx; this.view.y=this.drag.vy+dy; } else { const h=this.pick(e); if(h!==this.state.hover) this.setState({hover:h}); } },
+      onClick:e=>{ if(this.drag&&this.drag.moved) return; const h=this.pick(e); this.setState({sel:h}); },
+      noSelection: sel===null, hasSelection: sel!==null,
+      sampleCols: sel? this.sample(sel).cols : [],
+      sampleRows: sel? this.sample(sel).rows : [],
+      sampleNote: sel? 'SELECT * FROM public.'+sel.name+' LIMIT 6' : '',
+      selName: sel?'public.'+sel.name:'', selShort: sel?sel.name:'',
+      selRows: sel?fmt(sel.rows):'', selCols: sel?String(sel.cols):'',
+      selOut: sel?String(this.adj[sel.id].filter(a=>a.dir==='OUT').length):'',
+      selIn: sel?String(this.adj[sel.id].filter(a=>a.dir==='IN').length):'',
+      neighbours: sel? this.adj[sel.id].slice(0,60).map(a=>({ name:'public.'+this.nodes[a.o].name, dir:a.dir, dirColor:a.dir==='OUT'?'#46c7f0':'#3fd08b', select:()=>this.setState({sel:a.o}) })) : []
+    };
+  }
+}
+</script>
+</body>
+</html>

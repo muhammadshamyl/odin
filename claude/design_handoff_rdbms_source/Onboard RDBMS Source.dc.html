@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap">
+<style>
+body{margin:0;background:#05080d;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#e8eff7}
+a{color:#46c7f0;text-decoration:none}
+a:hover{color:#8adcf5}
+input,select,button{font-family:inherit}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</helmet>
+
+<section style="padding:44px 48px 40px;border-bottom:1px solid #141d29">
+<div style="display:flex;align-items:baseline;gap:12px;margin:0 0 8px">
+<a href="#t1" style="font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;padding:4px 8px;background:#46c7f0;color:#062230;border-radius:4px">1</a>
+<span style="font:600 13px 'Chakra Petch',sans-serif;letter-spacing:.04em;color:#e8eff7">RDBMS source — onboarding step 1</span>
+<span style="font:400 11px 'IBM Plex Mono',monospace;color:#586d82">artboards a–f · desktop content 1200px</span>
+</div>
+<p style="max-width:720px;margin:0 0 30px;font:400 13px/1.65 'IBM Plex Sans',sans-serif;color:#93a6ba;text-wrap:pretty">Assumption: the file path is unchanged; the RDBMS card is additive and hands off to the same step-2 <em>Preview &amp; configure</em> screen. The stepper only changes when the DB path is taken (Connect · Pick table · Preview &amp; types · Create · First run) — the file path keeps its four steps.</p>
+
+<div style="display:flex;flex-wrap:wrap;gap:44px;align-items:flex-start">
+
+<!-- ================= a — full screen ================= -->
+<div id="1a" style="display:flex;flex-direction:column;gap:10px;flex:none">
+<div style="display:flex;align-items:baseline;gap:9px;font:400 11px 'IBM Plex Mono',monospace;color:#586d82"><a href="#1a" style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;padding:3px 7px;background:#12202c;color:#93a6ba;border-radius:4px">1a</a>Reflowed step 1 — two-column source picker</div>
+<div style="width:1400px;background:#090d14;border:1px solid #1f2e3e;border-radius:6px;overflow:hidden">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 26px;border-bottom:1px solid #1f2e3e;background:#0b121b">
+    <div style="font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82">ODIN&nbsp; / &nbsp;OPERATIONS DECK&nbsp; / &nbsp;<span style="color:#e8eff7">ONBOARD SOURCE</span></div>
+    <div style="display:flex;align-items:center;gap:16px;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82">
+      <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid #1f2e3e;border-radius:999px;padding:4px 10px;color:#3fd08b"><span style="width:6px;height:6px;border-radius:50%;background:#3fd08b"></span>PROD</span>
+      <span>LIVE</span><span style="color:#93a6ba">12:10:32 UTC</span>
+    </div>
+  </div>
+  <div style="padding:34px 26px 40px">
+    <div style="display:flex;gap:18px;align-items:flex-start;margin-bottom:26px">
+      <div style="font:700 44px 'Chakra Petch',sans-serif;color:#12202c;line-height:.8">02</div>
+      <div>
+        <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#46c7f0;margin-bottom:9px">— MODULE 1 · 3 · 8 · 10.1</div>
+        <h1 style="margin:0 0 10px;font:700 34px/1 'Chakra Petch',sans-serif;letter-spacing:-.01em;color:#e8eff7">Onboard Source</h1>
+        <p style="margin:0;max-width:640px;font:400 13.5px/1.6 'IBM Plex Sans',sans-serif;color:#93a6ba;text-wrap:pretty">A DE-driven wizard. Nothing recurring is committed until a sample has been previewed and the load type approved. Pick a source type below.</p>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:0;margin-bottom:24px;border:1px solid #1f2e3e;border-radius:6px;overflow:hidden;width:max-content">
+      <div style="display:flex;align-items:center;gap:9px;padding:11px 18px;background:#12202c;border-right:1px solid #1f2e3e"><span style="width:18px;height:18px;border-radius:50%;background:#46c7f0;color:#062230;font:600 10px/18px 'IBM Plex Mono',monospace;text-align:center">1</span><span style="font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#e8eff7">SELECT SOURCE</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:11px 18px;border-right:1px solid #1f2e3e"><span style="width:18px;height:18px;border-radius:50%;border:1px solid #1f2e3e;color:#586d82;font:600 10px/17px 'IBM Plex Mono',monospace;text-align:center">2</span><span style="font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82">PREVIEW &amp; LOAD TYPE</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:11px 18px;border-right:1px solid #1f2e3e"><span style="width:18px;height:18px;border-radius:50%;border:1px solid #1f2e3e;color:#586d82;font:600 10px/17px 'IBM Plex Mono',monospace;text-align:center">3</span><span style="font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82">CREATE</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:11px 18px"><span style="width:18px;height:18px;border-radius:50%;border:1px solid #1f2e3e;color:#586d82;font:600 10px/17px 'IBM Plex Mono',monospace;text-align:center">4</span><span style="font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82">FIRST RUN</span></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start">
+
+      <!-- FILE CARD -->
+      <div style="position:relative;background:#0f1722;border:1px solid #1f2e3e;border-radius:6px;padding:22px 24px 24px">
+        <div style="position:absolute;top:0;left:0;width:14px;height:1px;background:#46c7f0"></div>
+        <div style="position:absolute;top:0;left:0;width:1px;height:14px;background:#46c7f0"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <h2 style="margin:0;font:600 17px 'Chakra Petch',sans-serif;letter-spacing:.01em;color:#e8eff7">File (CSV / TXT)</h2>
+          <span style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;padding:3px 8px;border-radius:999px;background:rgba(106,168,255,.12);color:#6aa8ff">ONE-SHOT</span>
+        </div>
+        <p style="margin:0 0 20px;font:400 12.5px/1.6 'IBM Plex Sans',sans-serif;color:#93a6ba">CSV or TXT. The header row becomes the column list; routing is configured on the next screen.</p>
+        <label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">FILE</label>
+        <div style="border:1px dashed #1f2e3e;border-radius:6px;background:#0b121b;padding:30px 18px;text-align:center;margin-bottom:18px">
+          <div style="font:400 12.5px 'IBM Plex Mono',monospace;color:#93a6ba;margin-bottom:6px">Drop a file here, or <span style="color:#46c7f0">browse</span></div>
+          <div style="font:400 10.5px 'IBM Plex Mono',monospace;letter-spacing:.06em;color:#586d82">.csv · .txt — up to 2 GB</div>
+        </div>
+        <button style="background:#46c7f0;color:#062230;border:1px solid #46c7f0;border-radius:4px;padding:10px 16px;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;cursor:pointer">UPLOAD &amp; PREVIEW</button>
+      </div>
+
+      <!-- RDBMS CARD (idle, condensed) -->
+      <div style="position:relative;background:#0f1722;border:1px solid #1f2e3e;border-radius:6px;padding:22px 24px 24px">
+        <div style="position:absolute;top:0;left:0;width:14px;height:1px;background:#46c7f0"></div>
+        <div style="position:absolute;top:0;left:0;width:1px;height:14px;background:#46c7f0"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <h2 style="margin:0;font:600 17px 'Chakra Petch',sans-serif;letter-spacing:.01em;color:#e8eff7">Relational database</h2>
+          <span style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;padding:3px 8px;border-radius:999px;background:rgba(63,208,139,.12);color:#3fd08b">RECURRING</span>
+        </div>
+        <p style="margin:0 0 20px;font:400 12.5px/1.6 'IBM Plex Sans',sans-serif;color:#93a6ba">Connect read-only and introspect. Odin lists tables, you pick one and an extraction strategy.</p>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 16px">
+          <div style="grid-column:1/-1">
+            <label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:7px">ENGINE</label>
+            <div style="display:inline-flex;border:1px solid #1f2e3e;border-radius:4px;overflow:hidden">
+              <span style="padding:8px 16px;font:500 11.5px 'IBM Plex Mono',monospace;letter-spacing:.06em;background:#12202c;color:#46c7f0;border-right:1px solid #1f2e3e">PostgreSQL</span>
+              <span style="padding:8px 16px;font:500 11.5px 'IBM Plex Mono',monospace;letter-spacing:.06em;color:#586d82">MySQL</span>
+            </div>
+          </div>
+          <div><label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:7px">HOST</label><input value="10.50.13.211" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:9px 11px;font:400 12.5px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none"></div>
+          <div><label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:7px">PORT</label><input value="5432" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:9px 11px;font:400 12.5px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none"></div>
+          <div><label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:7px">DATABASE</label><input value="warehouse" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:9px 11px;font:400 12.5px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none"></div>
+          <div><label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:7px">SCHEMA</label><input value="public" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:9px 11px;font:400 12.5px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none"></div>
+          <div><label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:7px">USERNAME</label><input value="odin_reader" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:9px 11px;font:400 12.5px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none"></div>
+          <div><label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:7px">PASSWORD</label><input value="••••••••••••" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:9px 11px;font:400 12.5px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none"></div>
+          <div style="grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #141d29;padding-top:14px">
+            <div>
+              <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:4px">SSL</div>
+              <div style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#93a6ba">require</div>
+            </div>
+            <div style="width:38px;height:20px;border-radius:999px;background:rgba(70,199,240,.2);border:1px solid #46c7f0;position:relative"><span style="position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#46c7f0"></span></div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <button style="background:#46c7f0;color:#062230;border:1px solid #46c7f0;border-radius:4px;padding:10px 16px;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;cursor:pointer">TEST CONNECTION</button>
+          <button style="background:transparent;color:#93a6ba;border:1px solid #1f2e3e;border-radius:4px;padding:10px 16px;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;cursor:pointer">CANCEL</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ================= b — idle, annotated ================= -->
+<div id="1b" style="display:flex;flex-direction:column;gap:10px;flex:none">
+<div style="display:flex;align-items:baseline;gap:9px;font:400 11px 'IBM Plex Mono',monospace;color:#586d82"><a href="#1b" style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;padding:3px 7px;background:#12202c;color:#93a6ba;border-radius:4px">1b</a>State 1 — idle / form (annotated)</div>
+<div style="display:flex;gap:26px;align-items:flex-start">
+  <div style="position:relative;width:560px;background:#0f1722;border:1px solid #1f2e3e;border-radius:6px;padding:24px 26px 26px">
+    <div style="position:absolute;top:0;left:0;width:14px;height:1px;background:#46c7f0"></div>
+    <div style="position:absolute;top:0;left:0;width:1px;height:14px;background:#46c7f0"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <h2 style="margin:0;font:600 18px 'Chakra Petch',sans-serif;color:#e8eff7">Relational database</h2>
+      <span style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;padding:3px 8px;border-radius:999px;background:rgba(63,208,139,.12);color:#3fd08b">RECURRING</span>
+    </div>
+    <p style="margin:0 0 22px;font:400 12.5px/1.6 'IBM Plex Sans',sans-serif;color:#93a6ba">Read-only credentials. Odin introspects the schema and never writes back to the source.</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 18px">
+      <div style="grid-column:1/-1">
+        <label style="display:flex;align-items:center;gap:8px;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">ENGINE <span style="width:15px;height:15px;border-radius:50%;background:#12202c;color:#46c7f0;font:600 9px/15px 'IBM Plex Mono',monospace;text-align:center">1</span></label>
+        <div style="display:inline-flex;border:1px solid #1f2e3e;border-radius:4px;overflow:hidden">
+          <span style="padding:9px 18px;font:500 12px 'IBM Plex Mono',monospace;background:#12202c;color:#46c7f0;border-right:1px solid #1f2e3e">PostgreSQL</span>
+          <span style="padding:9px 18px;font:500 12px 'IBM Plex Mono',monospace;color:#586d82">MySQL</span>
+        </div>
+      </div>
+      <div style="grid-column:span 1">
+        <label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">HOST</label>
+        <input value="10.50.13.211" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #46c7f0;box-shadow:0 0 0 3px rgba(70,199,240,.14);border-radius:4px;padding:10px 12px;font:400 13px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none">
+        <div style="font:400 10.5px 'IBM Plex Mono',monospace;color:#586d82;margin-top:6px">focus state shown</div>
+      </div>
+      <div>
+        <label style="display:flex;align-items:center;gap:8px;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">PORT <span style="width:15px;height:15px;border-radius:50%;background:#12202c;color:#46c7f0;font:600 9px/15px 'IBM Plex Mono',monospace;text-align:center">2</span></label>
+        <input value="5432" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:10px 12px;font:400 13px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none">
+      </div>
+      <div><label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">DATABASE</label><input value="warehouse" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:10px 12px;font:400 13px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none"></div>
+      <div><label style="display:flex;align-items:center;gap:8px;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">SCHEMA <span style="width:15px;height:15px;border-radius:50%;background:#12202c;color:#46c7f0;font:600 9px/15px 'IBM Plex Mono',monospace;text-align:center">3</span></label><input value="public" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:10px 12px;font:400 13px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none"></div>
+      <div><label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">USERNAME</label><input value="odin_reader" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:10px 12px;font:400 13px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none"></div>
+      <div>
+        <label style="display:flex;align-items:center;gap:8px;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">PASSWORD <span style="width:15px;height:15px;border-radius:50%;background:#12202c;color:#46c7f0;font:600 9px/15px 'IBM Plex Mono',monospace;text-align:center">4</span></label>
+        <input value="••••••••••••" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:10px 12px;font:400 13px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none">
+      </div>
+      <div style="grid-column:1/-1;font:400 11px/1.5 'IBM Plex Mono',monospace;color:#586d82;margin-top:-6px">Stored in the secret store, never shown again.</div>
+      <div style="grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #141d29;padding-top:16px">
+        <div>
+          <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:5px">SSL</div>
+          <div style="font:400 12px 'IBM Plex Sans',sans-serif;color:#93a6ba">require <span style="color:#586d82">· disable turns this off</span></div>
+        </div>
+        <div style="width:40px;height:21px;border-radius:999px;background:rgba(70,199,240,.2);border:1px solid #46c7f0;position:relative"><span style="position:absolute;top:2px;right:2px;width:15px;height:15px;border-radius:50%;background:#46c7f0"></span></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:22px">
+      <button style="background:#46c7f0;color:#062230;border:1px solid #46c7f0;border-radius:4px;padding:11px 18px;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;cursor:pointer">TEST CONNECTION</button>
+      <button style="background:transparent;color:#93a6ba;border:1px solid #1f2e3e;border-radius:4px;padding:11px 18px;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;cursor:pointer">CANCEL</button>
+    </div>
+  </div>
+
+  <div style="width:300px;display:flex;flex-direction:column;gap:14px;padding-top:6px">
+    <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#46c7f0">— FIELD CONSTRAINTS</div>
+    <div style="display:flex;gap:10px"><span style="flex:none;width:16px;height:16px;border-radius:50%;background:#12202c;color:#46c7f0;font:600 9px/16px 'IBM Plex Mono',monospace;text-align:center">1</span><p style="margin:0;font:400 11.5px/1.6 'IBM Plex Mono',monospace;color:#93a6ba">Engine drives the port default and the introspection query. Switching it resets PORT if untouched (5432 / 3306).</p></div>
+    <div style="display:flex;gap:10px"><span style="flex:none;width:16px;height:16px;border-radius:50%;background:#12202c;color:#46c7f0;font:600 9px/16px 'IBM Plex Mono',monospace;text-align:center">2</span><p style="margin:0;font:400 11.5px/1.6 'IBM Plex Mono',monospace;color:#93a6ba">Port: integer 1–65535. Host: hostname or IPv4, required, trimmed.</p></div>
+    <div style="display:flex;gap:10px"><span style="flex:none;width:16px;height:16px;border-radius:50%;background:#12202c;color:#46c7f0;font:600 9px/16px 'IBM Plex Mono',monospace;text-align:center">3</span><p style="margin:0;font:400 11.5px/1.6 'IBM Plex Mono',monospace;color:#93a6ba">Schema defaults to <span style="color:#e8eff7">public</span> (Postgres) / the database name (MySQL). Lowercase identifier, no quotes.</p></div>
+    <div style="display:flex;gap:10px"><span style="flex:none;width:16px;height:16px;border-radius:50%;background:#12202c;color:#46c7f0;font:600 9px/16px 'IBM Plex Mono',monospace;text-align:center">4</span><p style="margin:0;font:400 11.5px/1.6 'IBM Plex Mono',monospace;color:#93a6ba">Password write-only: posted to the secret store on test, echoed back as a handle only. No copy, no reveal.</p></div>
+    <div style="border-top:1px solid #141d29;padding-top:14px;font:400 11.5px/1.6 'IBM Plex Mono',monospace;color:#586d82">Test connection is disabled until host, database, username and password are non-empty.</div>
+  </div>
+</div>
+</div>
+
+<!-- ================= c — testing ================= -->
+<div id="1c" style="display:flex;flex-direction:column;gap:10px;flex:none">
+<div style="display:flex;align-items:baseline;gap:9px;font:400 11px 'IBM Plex Mono',monospace;color:#586d82"><a href="#1c" style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;padding:3px 7px;background:#12202c;color:#93a6ba;border-radius:4px">1c</a>State 2 — testing (form disabled)</div>
+<div style="position:relative;width:560px;background:#0f1722;border:1px solid #1f2e3e;border-radius:6px;padding:24px 26px 26px">
+  <div style="position:absolute;top:0;left:0;width:14px;height:1px;background:#46c7f0"></div>
+  <div style="position:absolute;top:0;left:0;width:1px;height:14px;background:#46c7f0"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <h2 style="margin:0;font:600 18px 'Chakra Petch',sans-serif;color:#e8eff7">Relational database</h2>
+    <span style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;padding:3px 8px;border-radius:999px;background:rgba(242,180,69,.12);color:#f2b445">TESTING</span>
+  </div>
+  <div style="opacity:.45;display:grid;grid-template-columns:1fr 1fr;gap:16px 18px;pointer-events:none">
+    <div style="grid-column:1/-1"><label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">ENGINE</label><div style="display:inline-flex;border:1px solid #1f2e3e;border-radius:4px;overflow:hidden"><span style="padding:9px 18px;font:500 12px 'IBM Plex Mono',monospace;background:#12202c;color:#93a6ba;border-right:1px solid #1f2e3e">PostgreSQL</span><span style="padding:9px 18px;font:500 12px 'IBM Plex Mono',monospace;color:#586d82">MySQL</span></div></div>
+    <div><label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">HOST</label><input value="10.50.13.211" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:10px 12px;font:400 13px 'IBM Plex Mono',monospace;color:#93a6ba;outline:none"></div>
+    <div><label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">PORT</label><input value="5432" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:10px 12px;font:400 13px 'IBM Plex Mono',monospace;color:#93a6ba;outline:none"></div>
+    <div><label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">DATABASE</label><input value="warehouse" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:10px 12px;font:400 13px 'IBM Plex Mono',monospace;color:#93a6ba;outline:none"></div>
+    <div><label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">SCHEMA</label><input value="public" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:10px 12px;font:400 13px 'IBM Plex Mono',monospace;color:#93a6ba;outline:none"></div>
+    <div><label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">USERNAME</label><input value="odin_reader" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:10px 12px;font:400 13px 'IBM Plex Mono',monospace;color:#93a6ba;outline:none"></div>
+    <div><label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">PASSWORD</label><input value="••••••••••••" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:10px 12px;font:400 13px 'IBM Plex Mono',monospace;color:#93a6ba;outline:none"></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;margin-top:22px">
+    <button style="display:inline-flex;align-items:center;gap:10px;background:rgba(70,199,240,.14);color:#46c7f0;border:1px solid #46c7f0;border-radius:4px;padding:11px 18px;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.12em">
+      <span style="width:12px;height:12px;border-radius:50%;border:2px solid rgba(70,199,240,.3);border-top-color:#46c7f0;animation:spin .8s linear infinite;display:inline-block"></span>TESTING…
+    </button>
+    <button style="background:transparent;color:#586d82;border:1px solid #1f2e3e;border-radius:4px;padding:11px 18px;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.12em">CANCEL</button>
+    <span style="font:400 11px 'IBM Plex Mono',monospace;color:#586d82">handshake · 10 s timeout</span>
+  </div>
+</div>
+</div>
+
+<!-- ================= d — connected / CURSOR ================= -->
+<div id="1d" style="display:flex;flex-direction:column;gap:10px;flex:none">
+<div style="display:flex;align-items:baseline;gap:9px;font:400 11px 'IBM Plex Mono',monospace;color:#586d82"><a href="#1d" style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;padding:3px 7px;background:#12202c;color:#93a6ba;border-radius:4px">1d</a>State 3 — connected · table picker · CURSOR</div>
+<div style="display:flex;gap:26px;align-items:flex-start">
+<div style="width:620px;background:#0f1722;border:1px solid #1f2e3e;border-radius:6px;position:relative">
+  <div style="position:absolute;top:0;left:0;width:14px;height:1px;background:#46c7f0"></div>
+  <div style="position:absolute;top:0;left:0;width:1px;height:14px;background:#46c7f0"></div>
+
+  <div style="padding:22px 26px 0">
+    <div style="display:flex;gap:0;margin-bottom:20px;border:1px solid #1f2e3e;border-radius:6px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 13px;border-right:1px solid #1f2e3e"><span style="width:15px;height:15px;border-radius:50%;background:#3fd08b;color:#062230;font:600 9px/15px 'IBM Plex Mono',monospace;text-align:center">✓</span><span style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#93a6ba">CONNECT</span></div>
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 13px;background:#12202c;border-right:1px solid #1f2e3e"><span style="width:15px;height:15px;border-radius:50%;background:#46c7f0;color:#062230;font:600 9px/15px 'IBM Plex Mono',monospace;text-align:center">2</span><span style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#e8eff7">PICK TABLE</span></div>
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 13px;border-right:1px solid #1f2e3e"><span style="width:15px;height:15px;border-radius:50%;border:1px solid #1f2e3e;color:#586d82;font:600 9px/14px 'IBM Plex Mono',monospace;text-align:center">3</span><span style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#586d82">PREVIEW &amp; TYPES</span></div>
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 13px;border-right:1px solid #1f2e3e"><span style="width:15px;height:15px;border-radius:50%;border:1px solid #1f2e3e;color:#586d82;font:600 9px/14px 'IBM Plex Mono',monospace;text-align:center">4</span><span style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#586d82">CREATE</span></div>
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 13px"><span style="width:15px;height:15px;border-radius:50%;border:1px solid #1f2e3e;color:#586d82;font:600 9px/14px 'IBM Plex Mono',monospace;text-align:center">5</span><span style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#586d82">FIRST RUN</span></div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(63,208,139,.09);border:1px solid rgba(63,208,139,.35);border-left:2px solid #3fd08b;border-radius:4px;padding:10px 14px;margin-bottom:22px">
+      <div style="font:500 12px 'IBM Plex Mono',monospace;color:#3fd08b">✔ Connected — PostgreSQL 16.2</div>
+      <div style="font:400 10.5px 'IBM Plex Mono',monospace;letter-spacing:.06em;color:#586d82">warehouse · public · 41 tables · 128 ms</div>
+    </div>
+  </div>
+
+  <div style="padding:0 26px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
+      <label style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82">SOURCE TABLE</label>
+      <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#586d82">41 introspected · 1 selected</span>
+    </div>
+    <input value="ord" readonly placeholder="filter schema.table" style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:9px 11px;font:400 12.5px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none;margin-bottom:10px">
+    <div style="border:1px solid #1f2e3e;border-radius:4px;background:#0b121b;max-height:214px;overflow:hidden">
+      <div style="display:grid;grid-template-columns:1fr 110px 92px;gap:12px;padding:8px 12px;border-bottom:1px solid #1f2e3e;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82"><span>SCHEMA.TABLE</span><span style="text-align:right">≈ ROWS</span><span style="text-align:right">COLS</span></div>
+      <div style="display:grid;grid-template-columns:1fr 110px 92px;gap:12px;padding:10px 12px;border-bottom:1px solid #141d29;background:rgba(70,199,240,.1);box-shadow:inset 2px 0 0 #46c7f0;font:400 12.5px 'IBM Plex Mono',monospace;color:#e8eff7"><span>public.orders</span><span style="text-align:right">4 812 006</span><span style="text-align:right;color:#93a6ba">18</span></div>
+      <div style="display:grid;grid-template-columns:1fr 110px 92px;gap:12px;padding:10px 12px;border-bottom:1px solid #141d29;font:400 12.5px 'IBM Plex Mono',monospace;color:#93a6ba"><span>public.order_items</span><span style="text-align:right">19 447 210</span><span style="text-align:right;color:#586d82">11</span></div>
+      <div style="display:grid;grid-template-columns:1fr 110px 92px;gap:12px;padding:10px 12px;border-bottom:1px solid #141d29;font:400 12.5px 'IBM Plex Mono',monospace;color:#93a6ba"><span>public.order_events</span><span style="text-align:right">88 130 954</span><span style="text-align:right;color:#586d82">7</span></div>
+      <div style="display:grid;grid-template-columns:1fr 110px 92px;gap:12px;padding:10px 12px;border-bottom:1px solid #141d29;font:400 12.5px 'IBM Plex Mono',monospace;color:#93a6ba"><span>public.order_refunds</span><span style="text-align:right">62 903</span><span style="text-align:right;color:#586d82">9</span></div>
+      <div style="display:grid;grid-template-columns:1fr 110px 92px;gap:12px;padding:10px 12px;font:400 12.5px 'IBM Plex Mono',monospace;color:#93a6ba"><span>sales.order_targets</span><span style="text-align:right">1 204</span><span style="text-align:right;color:#586d82">5</span></div>
+    </div>
+    <div style="font:400 10.5px 'IBM Plex Mono',monospace;color:#586d82;margin:8px 0 22px">Row counts are planner estimates (pg_class.reltuples) — not exact.</div>
+  </div>
+
+  <div style="border-top:1px solid #141d29;padding:22px 26px 26px">
+    <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#46c7f0;margin-bottom:16px">— FOR public.orders</div>
+    <label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">TARGET TABLE NAME</label>
+    <input value="orders" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:10px 12px;font:400 13px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none">
+    <div style="font:400 11px/1.5 'IBM Plex Mono',monospace;color:#586d82;margin:7px 0 22px">The physical name Odin creates — <span style="color:#93a6ba">staging.orders</span> / <span style="color:#93a6ba">production.orders</span>.</div>
+
+    <div style="border-top:1px solid #141d29;padding-top:18px;margin-bottom:22px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:5px">DATE PARTITION <span style="padding:2px 6px;border-radius:999px;background:rgba(106,168,255,.12);color:#6aa8ff;letter-spacing:.1em">OPTIONAL</span></div>
+          <div style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#93a6ba">Partition the target tables by date for faster traversal.</div>
+        </div>
+        <div style="width:40px;height:21px;border-radius:999px;background:rgba(70,199,240,.2);border:1px solid #46c7f0;position:relative;flex:none"><span style="position:absolute;top:2px;right:2px;width:15px;height:15px;border-radius:50%;background:#46c7f0"></span></div>
+      </div>
+      <div style="border:1px solid #1f2e3e;border-left:2px solid #46c7f0;border-radius:4px;background:#0b121b;padding:16px">
+        <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px">
+          <div>
+            <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">PARTITION COLUMN</div>
+            <div style="position:relative"><div style="background:#0f1722;border:1px solid #1f2e3e;border-radius:4px;padding:9px 30px 9px 11px;font:400 12.5px 'IBM Plex Mono',monospace;color:#e8eff7">created_at <span style="color:#586d82">· timestamptz</span></div><span style="position:absolute;right:11px;top:12px;width:7px;height:7px;border-right:1.5px solid #93a6ba;border-bottom:1.5px solid #93a6ba;transform:rotate(45deg)"></span></div>
+          </div>
+          <div>
+            <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">PARTITION GRAIN</div>
+            <div style="position:relative"><div style="background:#0f1722;border:1px solid #1f2e3e;border-radius:4px;padding:9px 30px 9px 11px;font:400 12.5px 'IBM Plex Mono',monospace;color:#e8eff7">Monthly</div><span style="position:absolute;right:11px;top:12px;width:7px;height:7px;border-right:1.5px solid #93a6ba;border-bottom:1.5px solid #93a6ba;transform:rotate(45deg)"></span></div>
+          </div>
+        </div>
+        <div style="font:400 11px/1.55 'IBM Plex Mono',monospace;color:#586d82;margin-top:11px">Odin creates <span style="color:#93a6ba">production.orders</span> as RANGE-partitioned on <span style="color:#93a6ba">created_at</span>, one partition per month, provisioned ahead of the current window. Off = a single unpartitioned table.</div>
+      </div>
+    </div>
+
+    <label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:9px">EXTRACTION STRATEGY</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+      <div style="border:1px solid #46c7f0;background:rgba(70,199,240,.1);border-radius:4px;padding:11px 12px"><div style="font:600 11.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#46c7f0;margin-bottom:5px">CURSOR</div><div style="font:400 10.5px/1.45 'IBM Plex Mono',monospace;color:#93a6ba">watermark on a monotonic column</div></div>
+      <div style="border:1px solid #1f2e3e;border-radius:4px;padding:11px 12px"><div style="font:600 11.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#93a6ba;margin-bottom:5px">TIME_WINDOW</div><div style="font:400 10.5px/1.45 'IBM Plex Mono',monospace;color:#586d82">slices by timestamp grain</div></div>
+      <div style="border:1px solid #1f2e3e;border-radius:4px;padding:11px 12px"><div style="font:600 11.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#93a6ba;margin-bottom:5px">FULL</div><div style="font:400 10.5px/1.45 'IBM Plex Mono',monospace;color:#586d82">pulled whole each run</div></div>
+    </div>
+
+    <div style="border:1px solid #1f2e3e;border-left:2px solid #46c7f0;border-radius:4px;background:#0b121b;padding:16px 16px 18px">
+      <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">CURSOR COLUMN</div>
+      <div style="position:relative;max-width:280px">
+        <div style="background:#0f1722;border:1px solid #1f2e3e;border-radius:4px;padding:9px 32px 9px 11px;font:400 12.5px 'IBM Plex Mono',monospace;color:#e8eff7">updated_at <span style="color:#586d82">· timestamptz</span></div>
+        <span style="position:absolute;right:11px;top:12px;width:7px;height:7px;border-right:1.5px solid #93a6ba;border-bottom:1.5px solid #93a6ba;transform:rotate(45deg)"></span>
+      </div>
+      <div style="font:400 11px/1.55 'IBM Plex Mono',monospace;color:#586d82;margin-top:9px">Candidates are monotonic columns only: <span style="color:#93a6ba">id (bigint)</span>, <span style="color:#93a6ba">updated_at</span>. Rows with a NULL cursor are diverted to quarantine.</div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-top:22px">
+      <button style="background:#46c7f0;color:#062230;border:1px solid #46c7f0;border-radius:4px;padding:11px 18px;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;cursor:pointer">CONTINUE → PREVIEW &amp; CONFIGURE</button>
+      <button style="background:transparent;color:#93a6ba;border:1px solid #1f2e3e;border-radius:4px;padding:11px 18px;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;cursor:pointer">CHANGE CONNECTION</button>
+    </div>
+  </div>
+</div>
+
+<div style="width:300px;display:flex;flex-direction:column;gap:14px;padding-top:6px">
+  <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#46c7f0">— HAND-OFF</div>
+  <p style="margin:0;font:400 11.5px/1.6 'IBM Plex Mono',monospace;color:#93a6ba"><span style="color:#e8eff7">CONTINUE → PREVIEW &amp; CONFIGURE</span> runs a LIMIT 200 sample against the selected table and enters the existing step-2 screen unchanged: sample rows, per-column production types, load type, existence column / composite natural key, recurrence, owner.</p>
+  <p style="margin:0;font:400 11.5px/1.6 'IBM Plex Mono',monospace;color:#586d82">Step 2 receives <span style="color:#93a6ba">{connection_id, schema, table, target_name, strategy, strategy_params}</span> in place of the file's <span style="color:#93a6ba">{upload_id}</span>. Nothing recurring is committed until step 3.</p>
+  <div style="border-top:1px solid #141d29;padding-top:14px;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#46c7f0">— CONSTRAINTS</div>
+  <p style="margin:0;font:400 11.5px/1.6 'IBM Plex Mono',monospace;color:#93a6ba">Target name: lowercase <span style="color:#e8eff7">[a-z0-9_]</span>, ≤ 63 chars, defaults to the source table name, must be unique within staging.</p>
+  <p style="margin:0;font:400 11.5px/1.6 'IBM Plex Mono',monospace;color:#93a6ba">Date partition is optional and defaults <span style="color:#e8eff7">off</span>. Column list is filtered to date / timestamp / timestamptz columns; when the strategy is TIME_WINDOW it pre-selects the window column. Grain: Daily · Monthly · Yearly, and must be coarser than or equal to the window grain. NULL partition keys are quarantined.</p>
+  <p style="margin:0;font:400 11.5px/1.6 'IBM Plex Mono',monospace;color:#93a6ba">Picker is single-select; filter matches schema and table. One pipeline per table — repeat the flow for a second table (connection is reused).</p>
+</div>
+</div>
+</div>
+
+<!-- ================= e — TIME_WINDOW variant ================= -->
+<div id="1e" style="display:flex;flex-direction:column;gap:10px;flex:none">
+<div style="display:flex;align-items:baseline;gap:9px;font:400 11px 'IBM Plex Mono',monospace;color:#586d82"><a href="#1e" style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;padding:3px 7px;background:#12202c;color:#93a6ba;border-radius:4px">1e</a>Strategy variants — TIME_WINDOW &amp; FULL (sub-form only)</div>
+<div style="width:620px;display:flex;flex-direction:column;gap:20px">
+  <div style="background:#0f1722;border:1px solid #1f2e3e;border-radius:6px;padding:22px 26px 24px">
+    <label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:9px">EXTRACTION STRATEGY</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+      <div style="border:1px solid #1f2e3e;border-radius:4px;padding:11px 12px"><div style="font:600 11.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#93a6ba;margin-bottom:5px">CURSOR</div><div style="font:400 10.5px/1.45 'IBM Plex Mono',monospace;color:#586d82">watermark on a monotonic column</div></div>
+      <div style="border:1px solid #46c7f0;background:rgba(70,199,240,.1);border-radius:4px;padding:11px 12px"><div style="font:600 11.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#46c7f0;margin-bottom:5px">TIME_WINDOW</div><div style="font:400 10.5px/1.45 'IBM Plex Mono',monospace;color:#93a6ba">slices by timestamp grain</div></div>
+      <div style="border:1px solid #1f2e3e;border-radius:4px;padding:11px 12px"><div style="font:600 11.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#93a6ba;margin-bottom:5px">FULL</div><div style="font:400 10.5px/1.45 'IBM Plex Mono',monospace;color:#586d82">pulled whole each run</div></div>
+    </div>
+    <div style="border:1px solid #1f2e3e;border-left:2px solid #46c7f0;border-radius:4px;background:#0b121b;padding:16px">
+      <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:14px">
+        <div>
+          <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">WINDOW COLUMN</div>
+          <div style="position:relative"><div style="background:#0f1722;border:1px solid #1f2e3e;border-radius:4px;padding:9px 30px 9px 11px;font:400 12.5px 'IBM Plex Mono',monospace;color:#e8eff7">created_at</div><span style="position:absolute;right:11px;top:12px;width:7px;height:7px;border-right:1.5px solid #93a6ba;border-bottom:1.5px solid #93a6ba;transform:rotate(45deg)"></span></div>
+        </div>
+        <div>
+          <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">WINDOW GRAIN</div>
+          <div style="position:relative"><div style="background:#0f1722;border:1px solid #1f2e3e;border-radius:4px;padding:9px 30px 9px 11px;font:400 12.5px 'IBM Plex Mono',monospace;color:#e8eff7">Hourly</div><span style="position:absolute;right:11px;top:12px;width:7px;height:7px;border-right:1.5px solid #93a6ba;border-bottom:1.5px solid #93a6ba;transform:rotate(45deg)"></span></div>
+        </div>
+        <div>
+          <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">SETTLING LAG (MIN)</div>
+          <input value="15" readonly style="width:100%;box-sizing:border-box;background:#0f1722;border:1px solid #1f2e3e;border-radius:4px;padding:9px 11px;font:400 12.5px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none">
+        </div>
+      </div>
+      <div style="font:400 11px/1.55 'IBM Plex Mono',monospace;color:#586d82;margin-top:11px">Grain: Hourly · Daily · Weekly · Monthly. Lag: integer 0–1440 — windows are only pulled once <span style="color:#93a6ba">now − lag</span> has passed their upper bound; late arrivals land in the waiting pipeline.</div>
+    </div>
+  </div>
+  <div style="background:#0f1722;border:1px solid #1f2e3e;border-radius:6px;padding:22px 26px 24px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+      <div style="border:1px solid #1f2e3e;border-radius:4px;padding:11px 12px"><div style="font:600 11.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#93a6ba">CURSOR</div></div>
+      <div style="border:1px solid #1f2e3e;border-radius:4px;padding:11px 12px"><div style="font:600 11.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#93a6ba">TIME_WINDOW</div></div>
+      <div style="border:1px solid #46c7f0;background:rgba(70,199,240,.1);border-radius:4px;padding:11px 12px"><div style="font:600 11.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#46c7f0">FULL</div></div>
+    </div>
+    <div style="border:1px solid #1f2e3e;border-left:2px solid #586d82;border-radius:4px;background:#0b121b;padding:14px 16px;font:400 11.5px/1.6 'IBM Plex Mono',monospace;color:#93a6ba">No extra fields — small reference tables, pulled whole each run. <span style="color:#586d82">Odin warns above ≈ 5 M estimated rows.</span></div>
+  </div>
+</div>
+</div>
+
+<!-- ================= f — error ================= -->
+<div id="1f" style="display:flex;flex-direction:column;gap:10px;flex:none">
+<div style="display:flex;align-items:baseline;gap:9px;font:400 11px 'IBM Plex Mono',monospace;color:#586d82"><a href="#1f" style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;padding:3px 7px;background:#12202c;color:#93a6ba;border-radius:4px">1f</a>State 4 — connection failed (form still editable)</div>
+<div style="position:relative;width:560px;background:#0f1722;border:1px solid #1f2e3e;border-radius:6px;padding:24px 26px 26px">
+  <div style="position:absolute;top:0;left:0;width:14px;height:1px;background:#ff6f6b"></div>
+  <div style="position:absolute;top:0;left:0;width:1px;height:14px;background:#ff6f6b"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+    <h2 style="margin:0;font:600 18px 'Chakra Petch',sans-serif;color:#e8eff7">Relational database</h2>
+    <span style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;padding:3px 8px;border-radius:999px;background:rgba(255,111,107,.12);color:#ff6f6b">FAILED</span>
+  </div>
+  <div style="background:rgba(255,111,107,.08);border:1px solid rgba(255,111,107,.4);border-left:2px solid #ff6f6b;border-radius:4px;padding:12px 14px;margin-bottom:22px">
+    <div style="font:500 12px 'IBM Plex Mono',monospace;color:#ff6f6b;margin-bottom:6px">✕ Connection failed — 4.2 s</div>
+    <div style="font:400 11.5px/1.55 'IBM Plex Mono',monospace;color:#e8eff7;word-break:break-word">FATAL: password authentication failed for user "odin_reader" (SQLSTATE 28P01)</div>
+    <div style="font:400 10.5px/1.5 'IBM Plex Mono',monospace;color:#586d82;margin-top:7px">Verbatim driver text, truncated at 400 chars. Password field cleared; nothing was written to the secret store.</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 18px">
+    <div><label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">HOST</label><input value="10.50.13.211" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:10px 12px;font:400 13px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none"></div>
+    <div><label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">PORT</label><input value="5432" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #1f2e3e;border-radius:4px;padding:10px 12px;font:400 13px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none"></div>
+    <div><label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">USERNAME</label><input value="odin_reader" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #ff6f6b;border-radius:4px;padding:10px 12px;font:400 13px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none"></div>
+    <div><label style="display:block;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#586d82;margin-bottom:8px">PASSWORD</label><input value="" placeholder="re-enter" readonly style="width:100%;box-sizing:border-box;background:#0b121b;border:1px solid #ff6f6b;box-shadow:0 0 0 3px rgba(255,111,107,.12);border-radius:4px;padding:10px 12px;font:400 13px 'IBM Plex Mono',monospace;color:#e8eff7;outline:none"></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;margin-top:22px">
+    <button style="background:#46c7f0;color:#062230;border:1px solid #46c7f0;border-radius:4px;padding:11px 18px;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;cursor:pointer">TEST CONNECTION</button>
+    <button style="background:transparent;color:#93a6ba;border:1px solid #1f2e3e;border-radius:4px;padding:11px 18px;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;cursor:pointer">CANCEL</button>
+    <a href="#1b" style="font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#586d82">← back to idle 1b</a>
+  </div>
+</div>
+</div>
+
+</div>
+
+<p style="margin:30px 0 0;font:400 12px/1.6 'IBM Plex Mono',monospace;color:#586d82">Try next: "make the RDBMS card the interactive prototype instead of artboards" · "add a saved-connections list above the form" · "show the step-2 screen with the DB source header"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}"></script>
+</body>
+</html>

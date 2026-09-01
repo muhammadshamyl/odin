@@ -1,17 +1,22 @@
 {% if error %}
-<div class="sql-err" style="margin-top:1rem">
+<div class="conn-strip err" style="margin-top:1rem">
   <b>&#10007; Connection failed{% if elapsed %} — {{ "%.1f"|format(elapsed) }} s{% endif %}</b>
   <p style="margin:.4rem 0 0; word-break:break-word">{{ error }}</p>
-  <p class="hint" style="margin-top:.5rem">Nothing was stored. Fix the details above and test again.</p>
+  <p class="hint" style="margin-top:.5rem">The password field was cleared and nothing was written to the secret store.</p>
 </div>
 {% else %}
-<div class="flash ok" style="margin-top:1rem; display:block">
+<div class="conn-strip ok" style="margin-top:1rem">
   <b>&#10003; Connected — {{ server_short }}</b>
   <div class="hint" style="margin-top:.3rem">
-    {{ database }} · {{ n_schemas }} schema{{ '' if n_schemas == 1 else 's' }}{% if elapsed %} · {{ "%.0f"|format(elapsed * 1000) }} ms{% endif %}
+    {{ database }}{% if direct_schema %} · <span class="mono">{{ direct_schema }}</span>{% endif %} · {{ n_schemas }} schema{{ '' if n_schemas == 1 else 's' }}{% if elapsed %} · {{ "%.0f"|format(elapsed * 1000) }} ms{% endif %}
   </div>
   <div class="btn-row" style="margin-top:.8rem">
+    {% if direct_schema %}
+    <a class="btn primary" href="/onboard/rdbms/{{ connection_id }}/{{ direct_schema }}/tables">Continue &rarr; {{ direct_schema }} table web</a>
+    <a class="btn ghost" href="/onboard/rdbms/{{ connection_id }}/schemas">pick a different schema</a>
+    {% else %}
     <a class="btn primary" href="/onboard/rdbms/{{ connection_id }}/schemas">Continue &rarr; pick schema</a>
+    {% endif %}
   </div>
 </div>
 {% endif %}

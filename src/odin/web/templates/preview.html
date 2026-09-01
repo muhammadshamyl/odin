@@ -7,17 +7,28 @@
 <div class="shead">
   <div class="no">02</div>
   <div>
-    <span class="eyebrow">Step 2 of 4 · pick load type &amp; column types</span>
+    <span class="eyebrow">
+      {%- if rdbms -%}Connect ✓ · pick table ✓ · configure ✓ · <b style="color:var(--text)">preview &amp; types</b> · create
+      {%- else -%}Step 2 of 4 · pick load type &amp; column types{%- endif -%}
+    </span>
     <h1>Preview &amp; configure</h1>
     <p class="sub">The sample lands in staging only — nothing reaches production until you create the pipeline. Types you set here become the production table's real column types; a value that will not cast is quarantined at transform.</p>
   </div>
 </div>
 
 <div class="stepper">
+  {% if rdbms %}
+  <div class="step done"><span class="n">✓</span>Connect</div>
+  <div class="step done"><span class="n">✓</span>Pick table</div>
+  <div class="step done"><span class="n">✓</span>Configure</div>
+  <div class="step active"><span class="n">4</span>Preview &amp; types</div>
+  <div class="step"><span class="n">5</span>Create</div>
+  {% else %}
   <div class="step done"><span class="n">✓</span>Upload</div>
   <div class="step active"><span class="n">2</span>Preview &amp; types</div>
   <div class="step"><span class="n">3</span>Create</div>
   <div class="step"><span class="n">4</span>First run</div>
+  {% endif %}
 </div>
 
 {% if error %}<div class="flash err" style="margin-top:16px">{{ error }}</div>{% endif %}
