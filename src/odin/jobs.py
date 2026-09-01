@@ -26,7 +26,7 @@ _JOBS: dict[str, "Job"] = {}
 _ORDER: list[str] = []
 _MAX_KEEP = 60
 
-_KINDS = ("extract", "transform", "ingest")
+_KINDS = ("extract", "transform", "ingest", "ingest_rdbms")
 
 
 def _now() -> datetime:
@@ -36,10 +36,12 @@ def _now() -> datetime:
 @dataclass
 class Job:
     id: str
-    kind: str                      # extract | transform | ingest
+    kind: str                      # extract | transform | ingest | ingest_rdbms
     source_id: str
     table_name: str
     file: str | None = None
+    tenure_from: str | None = None
+    tenure_to: str | None = None
     triggered_by: str = "manual"
     state: str = "queued"          # queued | running | done | failed
     submitted_at: datetime = field(default_factory=_now)
@@ -65,13 +67,15 @@ class Job:
 def submit(
     kind: str, source_id: str, table_name: str, *,
     file: str | None = None, triggered_by: str = "manual",
+    tenure_from: str | None = None, tenure_to: str | None = None,
 ) -> str:
     if kind not in _KINDS:
         raise ValueError(f"unknown job kind {kind!r}")
     if kind in ("extract", "ingest") and not file:
         raise ValueError(f"{kind} job needs a file")
     job = Job(id=uuid.uuid4().hex, kind=kind, source_id=source_id,
-              table_name=table_name, file=file, triggered_by=triggered_by)
+              table_name=table_name, file=file, triggered_by=triggered_by,
+              tenure_from=tenure_from, tenure_to=tenure_to)
     with _LOCK:
         _JOBS[job.id] = job
         _ORDER.append(job.id)
@@ -106,6 +110,20 @@ def _run(job_id: str) -> None:
             job.result = transform.run_transform(
                 job.source_id, job.table_name, triggered_by=job.triggered_by
             )
+        elif job.kind == "ingest_rdbms":  # pull -> CSV -> load -> transform, ONE run_id
+            run_id = runlog.new_run_id()
+            ex = extract.run_extract_rdbms(
+                job.source_id, job.table_name,
+                triggered_by=job.triggered_by, run_id=run_id,
+                tenure_from=job.tenure_from, tenure_to=job.tenure_to,
+            )
+            out: dict[str, Any] = {"run_id": run_id, "extract": ex}
+            if ex.get("status") == "loaded":
+                out["transform"] = transform.run_transform(
+                    job.source_id, job.table_name,
+                    triggered_by=job.triggered_by, run_id=run_id,
+                )
+            job.result = out
         else:  # ingest = extract then (if loaded) transform, under ONE run_id
             run_id = runlog.new_run_id()
             ex = extract.run_extract(

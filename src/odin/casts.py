@@ -74,10 +74,13 @@ def guard_sql(col: sql.Composable, token: str | None) -> sql.Composed | None:
 
 
 def cast_select(col: sql.Composable, token: str | None) -> sql.Composable:
-    """``col::<type>`` for a typed token; ``col`` unchanged for ``text``.
-    Safe to use only on rows that have already passed :func:`guard_sql`.
+    """``NULLIF(btrim(col::text), '')::<type>`` for a typed token — an empty /
+    whitespace staging value becomes NULL (valid for a nullable column; a NOT
+    NULL one was already quarantined by the ``empty_required`` filter). ``col``
+    unchanged for ``text``. Safe only on rows that passed :func:`guard_sql`.
     """
     tok = normalize(token)
     if tok == "text":
         return col
-    return sql.SQL("{c}::{t}").format(c=col, t=sql.SQL(PG_TYPE[tok]))
+    return sql.SQL("NULLIF(btrim({c}::text), '')::{t}").format(
+        c=col, t=sql.SQL(PG_TYPE[tok]))

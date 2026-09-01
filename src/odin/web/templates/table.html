@@ -40,6 +40,38 @@
     <div class="card-head"><h2>Data &amp; runs</h2></div>
     {% include "_data_stats.html" %}
 
+    {% if rdbms %}
+    <label class="field">Run pipeline</label>
+    <p class="hint" style="margin:-.2rem 0 .7rem">Pulls <span class="mono">{{ rdbms.source_schema }}.{{ rdbms.source_table }}</span> from <span class="mono">{{ rdbms_conn.host }}/{{ rdbms_conn.database }}</span> in batches &rarr; a file &rarr; <span class="mono">{{ cfg.staging_target }}</span> &rarr; transform &rarr; <span class="mono">{{ cfg.production_target }}</span>.
+      {% if rdbms.static_filter %}<br>Static filter: <span class="mono">{{ rdbms.static_filter.column }}</span> in [{{ rdbms.static_filter['from'] or '…' }}, {{ rdbms.static_filter['to'] or '…' }}].{% endif %}</p>
+    <form hx-post="/t/{{ cfg.source_id }}/{{ cfg.table_name }}/run-rdbms" hx-swap="none">
+      <div class="btn-row" style="gap:1.2rem; margin-bottom:.6rem">
+        <label class="reqbox"><input type="radio" name="mode" value="full" checked> Full table</label>
+        <label class="reqbox"><input type="radio" name="mode" value="tenure"
+               {% if not rdbms.tenure_column %}disabled{% endif %}>
+          Tenure{% if rdbms.tenure_column %} <span class="mono">({{ rdbms.tenure_column }})</span>{% else %} <span class="sub" style="text-transform:none">— no date column set</span>{% endif %}</label>
+      </div>
+      {% if rdbms.tenure_column %}
+      <div class="grid cols-2" style="gap:.2rem .9rem; margin-bottom:.7rem">
+        <div><label class="field">From</label><input type="date" name="tfrom"></div>
+        <div><label class="field">To</label><input type="date" name="tto"></div>
+      </div>
+      {% endif %}
+      <button class="btn primary" type="submit"><span class="spin"></span>Run pipeline</button>
+    </form>
+
+    <details class="substep" style="margin-top:1rem">
+      <summary>Manual steps</summary>
+      <div class="btn-row" style="margin-top:.6rem">
+        <button class="btn sm"
+                hx-post="/t/{{ cfg.source_id }}/{{ cfg.table_name }}/transform" hx-swap="none"
+                {% if not staging_count %}hx-confirm="Staging is empty — nothing to move to production. Run it anyway?" data-confirm-label="Run anyway"{% endif %}>
+          <span class="spin"></span>Run transform
+        </button>
+      </div>
+    </details>
+
+    {% else %}
     <label class="field">Load a file &rarr; production</label>
     <p class="hint" style="margin:-.2rem 0 .6rem">Lands the file in <span class="mono">{{ cfg.staging_target }}</span>, then runs the transform into <span class="mono">{{ cfg.production_target }}</span> and clears staging — one run, both stages.</p>
     <form class="dropzone" style="text-align:center" data-autosubmit
@@ -76,6 +108,7 @@
         </button>
       </div>
     </details>
+    {% endif %}
   </div>
 </div>
 

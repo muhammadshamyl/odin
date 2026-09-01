@@ -750,8 +750,11 @@ def table_detail(request: Request, source_id: str, table: str):
     col_meta = registry.get_columns_meta(source_id, table)
     waiting_rows = _count_safe(cfg.waiting_target) or 0
     quarantine_rows = _count_safe(cfg.quarantine_target) or 0
+    rdbms_src = registry.get_rdbms_source(source_id, table)
     return _render(request, "table.html",
                    cfg=cfg, columns=[c["column_name"] for c in col_meta],
+                   rdbms=rdbms_src, rdbms_conn=(rdbms.connection_meta(rdbms_src["connection_id"])
+                                               if rdbms_src else None),
                    cast_labels=casts.LABELS,
                    col_types={c["column_name"]: c["target_data_type"] for c in col_meta},
                    req_cols=[c["column_name"] for c in col_meta if not c["is_nullable"]],
@@ -831,6 +834,34 @@ def table_transform(request: Request, source_id: str, table: str):
     if _is_hx(request):
         return HTMLResponse("", headers=_hx(msg, "ok", **{"odin:runs-changed": True}))
     return _redirect(f"/t/{source_id}/{table}", msg=msg)
+
+
+@app.post("/t/{source_id}/{table}/run-rdbms", response_class=HTMLResponse)
+def table_run_rdbms(request: Request, source_id: str, table: str,
+                    mode: str = Form("full"),
+                    tfrom: str = Form(""), tto: str = Form("")):
+    """Run an RDBMS pipeline: pull → CSV → load → transform. `mode=full` pulls
+    the whole table (within any static filter); `mode=tenure` windows the
+    tenure column between `tfrom` and `tto`."""
+    src = registry.get_rdbms_source(source_id, table)
+    if src is None:
+        return HTMLResponse("", headers=_hx(f"{source_id}.{table} is not an RDBMS pipeline", "err"))
+    if any(j.source_id == source_id and j.table_name == table for j in jobs.active()):
+        return HTMLResponse("", headers=_hx("a job is already running for this pipeline", "err"))
+
+    tenure_from = tenure_to = None
+    if mode == "tenure":
+        if not src.get("tenure_column"):
+            return HTMLResponse("", headers=_hx("this pipeline has no tenure column — use a full run", "err"))
+        tenure_from, tenure_to = (tfrom.strip() or None), (tto.strip() or None)
+        if not tenure_from and not tenure_to:
+            return HTMLResponse("", headers=_hx("give a from and/or to date for a tenure run", "err"))
+
+    jobs.submit("ingest_rdbms", source_id, table, triggered_by="manual",
+                tenure_from=tenure_from, tenure_to=tenure_to)
+    span = (f"{tenure_from or '…'} → {tenure_to or '…'}" if mode == "tenure" else "full table")
+    return HTMLResponse("", headers=_hx(f"Pull queued ({span}) — progress shows in Runs",
+                                        "ok", **{"odin:runs-changed": True}))
 
 
 @app.post("/t/{source_id}/{table}/load", response_class=HTMLResponse)

@@ -10,8 +10,10 @@ batched extract-to-CSV that feeds the existing staging → production tail.
 
 from __future__ import annotations
 
+import csv
 import uuid
 from dataclasses import dataclass
+from pathlib import Path
 
 import psycopg
 from psycopg import conninfo
@@ -316,6 +318,70 @@ def column_tokens(connection_id: str, schema: str, table: str) -> dict[str, str]
     """``{column: cast_token}`` pre-filled from the source schema."""
     return {c["name"]: token_for(c["data_type"])
             for c in columns(connection_id, schema, table)}
+
+
+# --------------------------------------------------------------------------- #
+# batched extract-to-CSV — phase 4 (the "smarter CSV producer")
+# --------------------------------------------------------------------------- #
+
+def _csv_cell(v):
+    if v is None:
+        return ""
+    if v is True:
+        return "true"
+    if v is False:
+        return "false"
+    return v
+
+
+def extract_to_csv(src: dict, cols: list[str], dest_path, *,
+                   tenure_from: str | None = None, tenure_to: str | None = None) -> int:
+    """Stream ``src`` (a ``registry_rdbms_source`` row) into a CSV at
+    ``dest_path`` — header = ``cols`` in registry order, then rows. The static
+    range filter is always applied; the tenure window is applied when a
+    ``tenure_column`` is set and a bound is given (a Full run passes neither).
+    Returns the row count. Uses a server-side cursor so a huge table streams."""
+    p = get_connection(src["connection_id"])
+    schema, table = src["source_schema"], src["source_table"]
+
+    where, params = _static_where(src.get("static_filter"))
+    parts = [where] if where is not None else []
+    tcol = src.get("tenure_column")
+    if tcol and (tenure_from or tenure_to):
+        ref = _sql.Identifier(tcol)
+        if tenure_from:
+            parts.append(_sql.SQL("{} >= %s").format(ref)); params = [*params, tenure_from]
+        if tenure_to:
+            parts.append(_sql.SQL("{} <= %s").format(ref)); params = [*params, tenure_to]
+
+    stmt = _sql.SQL("SELECT {} FROM {}.{}").format(
+        _sql.SQL(", ").join(_sql.Identifier(c) for c in cols),
+        _sql.Identifier(schema), _sql.Identifier(table))
+    if parts:
+        stmt = stmt + _sql.SQL(" WHERE ") + _sql.SQL(" AND ").join(parts)
+
+    dest_path = Path(dest_path)
+    n = 0
+    try:
+        conn = psycopg.connect(p._dsn())          # not autocommit — server-side cursor
+    except (psycopg.Error, OSError) as exc:
+        raise RdbmsError(_clean_err(exc)) from exc
+    try:
+        with conn.cursor(name=f"odin_x_{uuid.uuid4().hex[:12]}") as cur:
+            cur.itersize = settings.rdbms_batch_rows
+            cur.execute(stmt, params)
+            with dest_path.open("w", newline="") as fh:
+                w = csv.writer(fh)
+                w.writerow(cols)
+                for row in cur:
+                    w.writerow([_csv_cell(v) for v in row])
+                    n += 1
+        conn.rollback()
+    except (psycopg.Error, OSError) as exc:
+        raise RdbmsError(_clean_err(exc)) from exc
+    finally:
+        conn.close()
+    return n
 
 
 def peek(connection_id: str, schema: str, table: str, *, limit: int = 20) -> dict:

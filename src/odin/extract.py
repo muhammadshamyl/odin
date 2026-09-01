@@ -23,6 +23,7 @@ from psycopg import sql
 from odin import registry, runlog
 from odin.config import settings
 from odin.connectors import file as fc
+from odin.connectors import rdbms
 from odin.db import connection
 from odin.ddl import STAGING_META
 from odin.locks import try_lock
@@ -196,3 +197,50 @@ def run_extract(
     runlog.finish(log_id, status="success", rows_processed=rows)
     status = "loaded" if rows else "empty"
     return {"run_id": run_id, "file_id": file_id, "status": status, "rows": rows}
+
+
+def run_extract_rdbms(
+    source_id: str, table_name: str, *,
+    triggered_by: str = "manual", run_id: str | None = None,
+    tenure_from: str | None = None, tenure_to: str | None = None,
+) -> dict:
+    """RDBMS source: query the source in batches -> CSV, then the exact file
+    tail (land -> Check 1 -> load to staging). One EXTRACT `run_log` row covers
+    the whole thing. A Full run passes no tenure bounds; a Tenure run passes a
+    window on the pipeline's `tenure_column`."""
+    run_id = run_id or runlog.new_run_id()
+    log_id = runlog.start(
+        dag_id="extract_rdbms", run_id=run_id, stage="EXTRACT",
+        source_id=source_id, table_name=table_name, triggered_by=triggered_by,
+    )
+    csv_path: Path | None = None
+    try:
+        registry.get_table(source_id, table_name)
+        src = registry.get_rdbms_source(source_id, table_name)
+        if src is None:
+            raise ExtractError(f"{source_id}.{table_name} is not an RDBMS pipeline")
+        cols = registry.get_columns(source_id, table_name)
+
+        settings.ensure_dirs()
+        csv_path = settings.upload_dir / f"rdbms_{uuid.uuid4().hex}.csv"
+        pulled = rdbms.extract_to_csv(src, cols, csv_path,
+                                      tenure_from=tenure_from, tenure_to=tenure_to)
+
+        file_id = land_file(source_id, table_name, csv_path)
+        reason = check_1(file_id)
+        if reason is not None:
+            runlog.finish(log_id, status="failed", rows_processed=0,
+                          error_message=f"check_1: {reason}")
+            return {"run_id": run_id, "file_id": file_id, "status": "quarantined",
+                    "rows": 0, "pulled": pulled, "reason": reason}
+        rows = load_to_staging(file_id, triggered_by=triggered_by)
+    except Exception as exc:
+        runlog.finish(log_id, status="failed", error_message=str(exc))
+        raise
+    finally:
+        if csv_path is not None:
+            csv_path.unlink(missing_ok=True)   # land_file copied it into the staging area
+
+    runlog.finish(log_id, status="success", rows_processed=rows)
+    return {"run_id": run_id, "file_id": file_id,
+            "status": "loaded" if rows else "empty", "rows": rows, "pulled": pulled}
