@@ -66,10 +66,10 @@
           <input name="db_schema" placeholder="public" autocomplete="off"></div>
         <div><label class="field">Username</label>
           <input name="username" required placeholder="odin_reader" autocomplete="off"></div>
-        <div><label class="field">Password</label>
-          <input name="password" type="password" required autocomplete="new-password"></div>
+        <div><label class="field">Password <span class="sub" style="text-transform:none">— optional</span></label>
+          <input name="password" type="password" autocomplete="new-password"></div>
       </div>
-      <p class="hint" style="margin:.4rem 0 .2rem">Stored in the <span class="mono">secret</span> schema, encrypted — never shown again.</p>
+      <p class="hint" style="margin:.4rem 0 .2rem">Leave blank if the database has no password. Stored in the <span class="mono">secret</span> schema, encrypted — never shown again.</p>
       <div class="btn-row" style="margin-top:1rem">
         <button class="btn primary" type="submit"><span class="spin"></span>Test connection</button>
         <a class="btn ghost" href="/">Cancel</a>
