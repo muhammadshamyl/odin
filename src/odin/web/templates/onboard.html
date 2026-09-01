@@ -39,23 +39,16 @@
       <span class="badge ok">recurring</span></div>
     <p class="hint" style="margin-bottom:1rem">Connect read-only and introspect. Odin lists schemas and tables; you pick one, bound the pull, and it lands as a file through the same pipeline. Never writes back to the source.</p>
 
-    <form hx-post="/onboard/rdbms/test" hx-target="#rdbms-result" hx-swap="innerHTML"
-          hx-disabled-elt="find button">
-      <div class="grid cols-2" style="gap:.2rem .9rem">
-        <div>
-          <label class="field">Engine</label>
-          <select name="engine">
-            <option value="postgres">PostgreSQL</option>
-            <option value="mysql" disabled>MySQL — soon</option>
-          </select>
-        </div>
-        <div>
-          <label class="field">SSL</label>
-          <select name="ssl">
-            <option value="require">require</option>
-            <option value="disable">disable</option>
-          </select>
-        </div>
+    <form class="rdbms-form" hx-post="/onboard/rdbms/test" hx-target="#rdbms-result"
+          hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+
+      <label class="field">Engine</label>
+      <div class="segbar" role="radiogroup" aria-label="Engine">
+        <label class="seg"><input type="radio" name="engine" value="postgres" checked><span>PostgreSQL</span></label>
+        <label class="seg disabled"><input type="radio" name="engine" value="mysql" disabled><span>MySQL <em>soon</em></span></label>
+      </div>
+
+      <div class="grid cols-2" style="gap:.2rem .9rem; margin-top:.4rem">
         <div><label class="field">Host</label>
           <input name="host" required placeholder="10.0.0.12 / db.internal" autocomplete="off"></div>
         <div><label class="field">Port</label>
@@ -67,10 +60,21 @@
         <div><label class="field">Username</label>
           <input name="username" required placeholder="odin_reader" autocomplete="off"></div>
         <div><label class="field">Password <span class="sub" style="text-transform:none">— optional</span></label>
-          <input name="password" type="password" autocomplete="new-password"></div>
+          <div class="pw">
+            <input name="password" type="password" autocomplete="new-password" placeholder="blank if none">
+            <button type="button" class="pw-eye" aria-label="Show password" data-shown="0">show</button>
+          </div>
+        </div>
       </div>
-      <p class="hint" style="margin:.4rem 0 .2rem">Leave blank if the database has no password. Stored in the <span class="mono">secret</span> schema, encrypted — never shown again.</p>
-      <div class="btn-row" style="margin-top:1rem">
+
+      <label class="field" style="margin-top:.9rem">SSL</label>
+      <div class="segbar segbar-sm" role="radiogroup" aria-label="SSL mode">
+        <label class="seg"><input type="radio" name="ssl" value="require" checked><span>require</span></label>
+        <label class="seg"><input type="radio" name="ssl" value="disable"><span>disable</span></label>
+      </div>
+
+      <p class="hint" style="margin:.7rem 0 .2rem">Credentials go to the <span class="mono">secret</span> schema, encrypted — never shown again.</p>
+      <div class="btn-row" style="margin-top:.9rem">
         <button class="btn primary" type="submit"><span class="spin"></span>Test connection</button>
         <a class="btn ghost" href="/">Cancel</a>
       </div>
@@ -79,5 +83,17 @@
   </div>
 
 </div>
+
+<script>
+document.addEventListener("click", function (e) {
+  var b = e.target.closest && e.target.closest(".pw-eye");
+  if (!b) return;
+  var inp = b.parentElement.querySelector("input");
+  var show = b.dataset.shown === "1";
+  inp.type = show ? "password" : "text";
+  b.dataset.shown = show ? "0" : "1";
+  b.textContent = show ? "show" : "hide";
+});
+</script>
 
 {% endblock %}

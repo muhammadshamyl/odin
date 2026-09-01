@@ -1326,3 +1326,33 @@ li.CodeMirror-hint-active{background:var(--phos-soft); color:var(--text)}
 .rdbms-web .tnode:hover text{fill:var(--text)}
 .rdbms-web .tnode.sel circle{fill:var(--accent); stroke:var(--accent)}
 .rdbms-web .tnode.sel text{fill:var(--accent); font-weight:700}
+
+/* ---- onboarding: RDBMS connect — segmented control + password reveal ---- */
+.segbar{
+  display:inline-flex; border:1px solid var(--border); border-radius:var(--radius-sm);
+  overflow:hidden; background:var(--panel-2);
+}
+.segbar .seg{
+  position:relative; display:inline-flex; align-items:center; gap:.4rem;
+  padding:8px 16px; cursor:pointer; user-select:none;
+  font:500 11.5px/1 var(--mono); letter-spacing:.04em; color:var(--text-faint);
+  border-right:1px solid var(--border); transition:background .12s var(--ease), color .12s var(--ease);
+}
+.segbar .seg:last-child{border-right:0}
+.segbar .seg input{position:absolute; opacity:0; width:1px; height:1px; pointer-events:none}
+.segbar .seg:hover:not(.disabled){color:var(--text-soft)}
+.segbar .seg:has(input:checked){background:var(--accent-soft); color:var(--accent)}
+.segbar .seg:has(input:focus-visible){box-shadow:inset 0 0 0 2px var(--accent-soft)}
+.segbar .seg.disabled{color:var(--text-faint); opacity:.5; cursor:not-allowed}
+.segbar .seg em{font-style:normal; font-size:9px; letter-spacing:.1em; text-transform:uppercase; opacity:.7}
+.segbar-sm .seg{padding:6px 13px; font-size:10.5px}
+
+.pw{position:relative; display:flex; align-items:center}
+.pw input{flex:1; padding-right:3.4rem}
+.pw-eye{
+  position:absolute; right:6px; top:50%; transform:translateY(-50%);
+  background:transparent; border:0; cursor:pointer; padding:4px 6px;
+  font:600 9px/1 var(--mono); letter-spacing:.1em; text-transform:uppercase;
+  color:var(--text-faint);
+}
+.pw-eye:hover{color:var(--accent)}
