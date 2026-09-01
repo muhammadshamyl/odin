@@ -786,7 +786,10 @@ def partial_lineage(request: Request, source_id: str, table: str):
     quarantine = resolve.open_quarantine(source_id, table)
     waiting_rows = _count_safe(cfg.waiting_target) or 0
     quarantine_rows = _count_safe(cfg.quarantine_target) or 0
-    return _render(request, "_lineage.html", cfg=cfg,
+    rdbms_src = registry.get_rdbms_source(source_id, table)
+    return _render(request,
+                   "_lineage_rdbms.html" if rdbms_src else "_lineage.html", cfg=cfg,
+                   rdbms=rdbms_src,
                    state=_pipeline_stage_state(
                        source_id, table,
                        waiting_rows=waiting_rows, quarantine_rows=quarantine_rows,

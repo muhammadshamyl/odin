@@ -463,11 +463,19 @@ label.field,.stage label:not(.nolabel),main.wrap label:not(.nolabel){
   letter-spacing:.12em; text-transform:uppercase; color:var(--text-faint);
 }
 .hint{color:var(--text-faint); font-size:11.5px; margin-top:.25rem}
-input[type=text],input[type=search],input[type=file],input:not([type]),select,textarea{
+input[type=text],input[type=search],input[type=file],input[type=password],
+input[type=number],input[type=email],input[type=url],input[type=tel],
+input[type=date],input[type=datetime-local],input[type=time],
+input:not([type]),select,textarea{
   font:12px/1.5 var(--mono); width:100%; max-width:32rem;
   padding:9px 11px; border-radius:var(--radius-sm);
   border:1px solid var(--border); background:var(--panel-2); color:var(--text);
   transition:border-color .15s var(--ease), box-shadow .15s var(--ease);
+}
+/* password dots: same face + spacing as everything else, not the OS default */
+input[type=password]{font-family:var(--mono); letter-spacing:.12em}
+input[type=date],input[type=datetime-local],input[type=time]{
+  color-scheme:dark; min-height:36px;
 }
 input:focus,select:focus,textarea:focus{
   outline:none; border-color:var(--accent);
@@ -587,6 +595,10 @@ form.inline{display:inline-block; margin-right:.5rem}
 .lineage rect.node{fill:var(--panel-2); stroke:var(--border)}
 .lineage rect.proc{fill:var(--raise); stroke:var(--border); stroke-dasharray:3 3}
 .lineage rect.prod{stroke:var(--accent)}
+.lineage rect.file{fill:var(--panel-2); stroke:var(--border)}
+.lineage .fold{fill:var(--raise); stroke:var(--border); stroke-width:1}
+#lineage-panel g.s-done rect.file{fill:var(--accent-soft)}
+#lineage-panel g.s-done .fold{fill:color-mix(in srgb,var(--accent) 22%,transparent)}
 .lineage .flow{stroke:var(--accent); stroke-width:1.5; fill:none; stroke-dasharray:5 6; animation:dash 1s linear infinite}
 .lineage .div{stroke-width:1.4; fill:none; stroke-dasharray:3 4}
 .lineage .div.q{stroke:var(--warn)} .lineage .div.w{stroke:var(--info)}

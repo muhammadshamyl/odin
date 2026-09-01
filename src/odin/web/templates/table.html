@@ -17,7 +17,7 @@
 
 <div class="card marked">
   <div class="card-head"><h2>Lineage</h2><div class="grow"></div><span class="mlabel">{{ cfg.staging_target }} &rarr; {{ cfg.production_target }}</span></div>
-  {% include "_lineage.html" %}
+  {% include "_lineage_rdbms.html" if rdbms else "_lineage.html" %}
 </div>
 
 <div class="grid cols-2">

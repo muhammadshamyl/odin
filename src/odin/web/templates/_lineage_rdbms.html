@@ -1,0 +1,77 @@
+{# Self-refreshing lineage for an RDBMS-backed table.
+   Chain: Source DB -> extract (batched pull) -> CSV batch file -> Staging -> transform -> Production.
+   The CSV node is written as part of EXTRACT, so it shares `state.extract`.
+   `state`   : per-node 'running' | 'done' | 'failed' | None (app._pipeline_stage_state)
+   `polling` : truthy while a job for this table is queued/running -> adds the 4s tick
+   Refreshes on the same `odin:runs-changed` body event the runs panel listens for. #}
+<div id="lineage-panel"
+     hx-get="/partials/lineage/{{ cfg.source_id }}/{{ cfg.table_name }}"
+     hx-swap="morph:outerHTML"
+     hx-trigger="odin:runs-changed from:body{% if polling %}, every 4s{% endif %}">
+  <svg class="lineage" viewBox="0 0 1024 210" role="img"
+       aria-label="RDBMS pipeline lineage, current stage highlighted">
+    <path class="flow{% if state.extract == 'running' %} live{% endif %}" d="M148 60 H196"/>
+    <path class="flow{% if state.extract == 'running' %} live{% endif %}" d="M316 60 H360"/>
+    <path class="flow{% if state.staging == 'running' %} live{% endif %}" d="M480 60 H524"/>
+    <path class="flow{% if state.transform == 'running' %} live{% endif %}" d="M644 60 H688"/>
+    <path class="flow{% if state.production == 'running' %} live{% endif %}" d="M808 60 H852"/>
+
+    <g class="lg s-{{ state.source or 'idle' }}">
+      <rect class="node" x="16" y="38" width="132" height="44" rx="4"/>
+      <text class="nlabel" x="82" y="58" text-anchor="middle">Source DB</text>
+      <text class="nsub" x="82" y="72" text-anchor="middle">{{ rdbms.source_schema }}.{{ rdbms.source_table }}</text>
+    </g>
+
+    <g class="lg s-{{ state.extract or 'idle' }}">
+      <rect class="proc" x="196" y="42" width="120" height="36" rx="4"/>
+      <text class="nlabel" x="256" y="59" text-anchor="middle">extract</text>
+      <text class="nsub" x="256" y="71" text-anchor="middle">batched pull</text>
+    </g>
+
+    <g class="lg s-{{ state.extract or 'idle' }}">
+      <rect class="node file" x="360" y="38" width="120" height="44" rx="4"/>
+      <path class="fold" d="M468 38 L468 50 L480 50 Z"/>
+      <text class="nlabel" x="420" y="58" text-anchor="middle">CSV</text>
+      <text class="nsub" x="420" y="72" text-anchor="middle">batch file</text>
+    </g>
+
+    <g class="lg s-{{ state.staging or 'idle' }}">
+      <rect class="node" x="524" y="38" width="120" height="44" rx="4"/>
+      <text class="nlabel" x="584" y="58" text-anchor="middle">Staging</text>
+      <text class="nsub" x="584" y="72" text-anchor="middle">{{ (staging_count | compact) ~ " rows" if staging_count is not none else "VARCHAR buffer" }}</text>
+    </g>
+
+    <g class="lg s-{{ state.transform or 'idle' }}">
+      <rect class="proc" x="688" y="42" width="120" height="36" rx="4"/>
+      <text class="nlabel" x="748" y="64" text-anchor="middle">transform</text>
+    </g>
+
+    <g class="lg s-{{ state.production or 'idle' }}">
+      <rect class="node prod" x="852" y="38" width="124" height="44" rx="4"/>
+      <text class="nlabel" x="914" y="58" text-anchor="middle" style="fill:var(--accent)">Production</text>
+      <text class="nsub" x="914" y="72" text-anchor="middle">{{ (prod_count | compact) ~ " rows" if prod_count is not none else "partition · load_date" }}</text>
+    </g>
+
+    <path class="div" style="stroke:var(--text-faint)" d="M914 82 V128"/>
+    <g><rect class="node" x="852" y="128" width="124" height="40" rx="4"/>
+      <text class="nlabel" x="914" y="152" text-anchor="middle">Business</text></g>
+
+    <path class="div q{% if state.quarantine %} live{% endif %}" d="M748 78 V120 H595 V150"/>
+    <path class="div w{% if state.waiting %} live{% endif %}" d="M748 78 V134 H765 V150"/>
+    <g class="lg qn s-{{ state.quarantine or 'idle' }}">
+      <rect class="qbox" x="520" y="150" width="150" height="40" rx="4"/>
+      <text class="nlabel" x="595" y="167" text-anchor="middle" style="fill:var(--warn)">Quarantine</text>
+      <text class="nsub" x="595" y="181" text-anchor="middle">{{ (quarantine_rows | compact) ~ " bad" if quarantine_rows else "0 bad" }}</text></g>
+    <g class="lg wn s-{{ state.waiting or 'idle' }}">
+      <rect class="wbox" x="690" y="150" width="150" height="40" rx="4"/>
+      <text class="nlabel" x="765" y="167" text-anchor="middle" style="fill:var(--info)">Waiting</text>
+      <text class="nsub" x="765" y="181" text-anchor="middle">{{ (waiting_rows | compact) ~ " held" if waiting_rows else "0 held" }}</text></g>
+  </svg>
+
+  <div class="lineage-legend mlabel">
+    <span class="lg-key s-running">running</span>
+    <span class="lg-key s-done">complete</span>
+    <span class="lg-key s-failed">failed</span>
+    {% if polling %}<span class="lg-key s-live">· live</span>{% endif %}
+  </div>
+</div>

@@ -50,7 +50,12 @@ Provides full observability across the pipeline infrastructure. Tracks execution
   `_runs_panel.html` (the run log), `_lineage.html` + `GET /partials/lineage/…`
   (animated pipeline diagram — every node glows for its state, including the
   **Quarantine / Waiting** boxes, which pulse amber / blue while a transform runs
-  and stay lit while their batch table holds rows), and
+  and stay lit while their batch table holds rows). An RDBMS-backed table gets
+  `_lineage_rdbms.html` instead (same route, chosen when
+  `registry.get_rdbms_source` returns a row): the chain gains two nodes —
+  **Source DB → extract (batched pull) → CSV batch file → Staging → transform →
+  Production** — with the DB / extract / CSV nodes all bound to `state.extract`
+  (the CSV is written inside the extract run). And
   `_data_stats.html` + `GET /partials/stats/…` (the table page's
   staging / production / waiting / quarantine KPI cards — previously static, so a
   run left them stale until a full page reload).
