@@ -11,7 +11,7 @@ revisit later:
 |---|---|---|---|
 | Motion | permanent rAF loop, animated links, 16 traveling dots | one ~300-iter force pass on load (160 for n>400), static render; bounded rAF only for the layout-switch ease + selection pulse | answer 1 |
 | Layouts | WEB / RING / CLUSTERS | all three (CLUSTERS re-added 2026-09-02 after user feedback); RING sorts by (prefix-group, name), CLUSTERS = a grid per prefix group around a ring | answer 4 → reversed on request |
-| Node colour | 6 semantic clusters, colour-coded | single `--accent`, size by `reltuples`, glow on hub/selection/filter-match; prefix groups drive only the WEB gravity anchors + a **neutral** legend | answer 3 |
+| Node colour | 6 semantic clusters, colour-coded | **colour-coded by prefix group** (8-colour palette + grey "other"), size by `reltuples`, group-coloured glow on hub/selection/filter-match, coloured legend (re-added 2026-09-02 on request; answer 3 said single accent). Colour is decoupled from layout — it does NOT pull nodes into wells. | answer 3 → reversed on request |
 | Scale | tuned for 186/400 | >200 nodes → only degree≥1 shown + "show all (N)" toggle; >600 → default RING; ≤10 → radial, no sim | answer 5 |
 | Connect card | artboard 1d adds a table-picker list, target-name field, DATE PARTITION toggle, EXTRACTION STRATEGY tiles | none of those added — cosmetic restyle only | answer 7 / "backend frozen" |
 | Stepper | `Connect · Pick table · Preview & types · Create · First run` | `Connect · Pick table · Configure · Preview & types · Create` | answer 8 |
@@ -49,6 +49,24 @@ User saw "maybe ten tables" on a ~186-table schema and "it looks off":
 - `resize()` retries on the next frame if the canvas measures < 40px (layout
   not settled).
 - `web_json` now escapes `<` as `<` (defensive, inline `<script>` JSON).
+
+## Fix 2 — WEB collapsed to a straight line (2026-09-02)
+
+The handoff's `layoutWeb` seeds nodes at per-group **anchor points** on an
+ellipse `{cos(2πi/NG)·400, sin(2πi/NG)·340}` and applies strong gravity toward
+them. With `NG === 2` those two anchors are colinear (both at y≈0), so every node
+collapsed onto the x-axis — a straight line. `NG === 1` also degenerates.
+
+Rewrote `layoutWeb` as a plain force layout, no per-group wells:
+- **golden-angle spiral seed** (even, no axis bias) instead of group anchors;
+- repulsion `2400/d²` within ~500px, springs `(d−74)·0.045`;
+- gentle `α`-scaled centering (`−p·0.012·α`) so it stays framed but relaxes;
+- a *weak* same-colour cohesion (`0.010·α` toward the group centroid, only when
+  `NG ≥ 3`) so colours form loose neighbourhoods — never a well.
+
+Probed aspect ratio (min/max bbox side): NG=1 → 0.97, NG=2 → 0.89, NG=9 skewed
+→ 0.93 — all well-formed 2-D blobs. Group anchors are still used by CLUSTERS and
+the RING sort order.
 
 ## Open items / things to address later
 

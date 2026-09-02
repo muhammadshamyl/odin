@@ -58,22 +58,29 @@
   var adj = nodes.map(function () { return []; });
   links.forEach(function (l, i) { adj[l.a].push({ o:l.b, i:i }); adj[l.b].push({ o:l.a, i:i }); });
 
-  // prefix groups (before first "_"), capped at 8 + "other"
+  // prefix groups (before first "_"), the 8 most common get a vivid colour;
+  // the long tail is "other" (neutral grey). Colour is purely visual — it does
+  // NOT drive the WEB layout (see layoutWeb).
+  var PALETTE = ["#46c7f0", "#3fd08b", "#b98cff", "#f2b445",
+                 "#6aa8ff", "#ff6f6b", "#8bd450", "#f078c8"];
+  var OTHER_COLOR = "#5b6b7d";
   var counts = {};
   nodes.forEach(function (n) {
     var p = (n.name.split("_")[0] || n.name).toLowerCase();
     counts[p] = (counts[p] || 0) + 1;
   });
-  var top = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; }).slice(0, 8);
+  var top = Object.keys(counts)
+    .sort(function (a, b) { return counts[b] - counts[a] || a.localeCompare(b); })
+    .slice(0, 8);
   var groupIx = {}; top.forEach(function (p, i) { groupIx[p] = i; });
-  var GROUPS = top.slice();
+  var GROUPS = top.map(function (p, i) { return { name: p, color: PALETTE[i] }; });
   var hasOther = false;
   nodes.forEach(function (n) {
     var p = (n.name.split("_")[0] || n.name).toLowerCase();
-    if (p in groupIx) { n.g = groupIx[p]; n.gp = p; }
-    else { n.g = top.length; n.gp = "other"; hasOther = true; }
+    if (p in groupIx) { n.g = groupIx[p]; n.gp = p; n.color = PALETTE[groupIx[p]]; }
+    else { n.g = top.length; n.gp = "other"; n.color = OTHER_COLOR; hasOther = true; }
   });
-  if (hasOther) GROUPS.push("other");
+  if (hasOther) GROUPS.push({ name: "other", color: OTHER_COLOR });
   var NG = GROUPS.length;
 
   var maxDeg = nodes.reduce(function (m, n) { return Math.max(m, n.deg); }, 0);
@@ -150,26 +157,36 @@
     var n = list.length;
     var idx = {}; list.forEach(function (nd, i) { idx[nd.id] = i; });
     var px = new Float64Array(n), py = new Float64Array(n), vx = new Float64Array(n), vy = new Float64Array(n);
-    var anchors = GROUPS.map(function (_, i) {
-      var a = (i / NG) * Math.PI * 2;
-      return { x: Math.cos(a) * 400, y: Math.sin(a) * 340 };
-    });
+    var grp = new Int32Array(n);
+    // golden-angle spiral seed — even coverage, no axis/colinear bias
+    var GA = Math.PI * (3 - Math.sqrt(5));
     for (var i = 0; i < n; i++) {
-      var a0 = anchors[list[i].g] || { x: 0, y: 0 };
-      px[i] = a0.x + (rnd() - 0.5) * 180; py[i] = a0.y + (rnd() - 0.5) * 180;
+      var rr = 13 * Math.sqrt(i + 1), aa = i * GA;
+      px[i] = Math.cos(aa) * rr + (rnd() - 0.5) * 8;
+      py[i] = Math.sin(aa) * rr + (rnd() - 0.5) * 8;
+      grp[i] = list[i].g;
     }
     var LL = [];
     links.forEach(function (l) {
       if (idx[l.a] != null && idx[l.b] != null) LL.push([idx[l.a], idx[l.b]]);
     });
-    var ITERS = n > 700 ? 90 : n > 400 ? 150 : 300;
+    var ITERS = n > 700 ? 110 : n > 400 ? 170 : 320;
+    var REP = 2400, CUT = 250000;           // repel within ~500px
+    var SPRING_L = 74, SPRING_K = 0.045;
+    var COHERE = NG >= 3 ? 0.010 : 0;       // gentle same-colour cohesion, never a well
+    var gcx = new Float64Array(NG), gcy = new Float64Array(NG), gcn = new Int32Array(NG);
     for (var it = 0; it < ITERS; it++) {
       var alpha = 1 - it / ITERS;
+      if (COHERE) {
+        gcx.fill(0); gcy.fill(0); gcn.fill(0);
+        for (var c0 = 0; c0 < n; c0++) { var g0 = grp[c0]; gcx[g0] += px[c0]; gcy[g0] += py[c0]; gcn[g0]++; }
+        for (var g1 = 0; g1 < NG; g1++) if (gcn[g1]) { gcx[g1] /= gcn[g1]; gcy[g1] /= gcn[g1]; }
+      }
       for (var p = 0; p < n; p++) {
         for (var q = p + 1; q < n; q++) {
           var dx = px[q] - px[p], dy = py[q] - py[p], d2 = dx * dx + dy * dy;
-          if (d2 > 90000 || d2 === 0) continue;
-          var d = Math.sqrt(d2), f = 1600 / d2;
+          if (d2 > CUT || d2 === 0) continue;
+          var d = Math.sqrt(d2), f = REP / d2;
           var ux = dx / d * f, uy = dy / d * f;
           vx[p] -= ux; vy[p] -= uy; vx[q] += ux; vy[q] += uy;
         }
@@ -177,16 +194,20 @@
       for (var k = 0; k < LL.length; k++) {
         var A = LL[k][0], B = LL[k][1];
         var lx = px[B] - px[A], ly = py[B] - py[A];
-        var ld = Math.hypot(lx, ly) || 1, lf = (ld - 64) * 0.035;
+        var ld = Math.hypot(lx, ly) || 1, lf = (ld - SPRING_L) * SPRING_K;
         var lux = lx / ld * lf, luy = ly / ld * lf;
         vx[A] += lux; vy[A] += luy; vx[B] -= lux; vy[B] -= luy;
       }
       for (var m = 0; m < n; m++) {
-        var an = anchors[list[m].g] || { x: 0, y: 0 };
-        vx[m] += (an.x - px[m]) * 0.014; vy[m] += (an.y - py[m]) * 0.014;
-        vx[m] -= px[m] * 0.002; vy[m] -= py[m] * 0.002;
-        px[m] += vx[m] * alpha * 0.9; py[m] += vy[m] * alpha * 0.9;
-        vx[m] *= 0.82; vy[m] *= 0.82;
+        if (COHERE) {
+          var gm = grp[m];
+          vx[m] += (gcx[gm] - px[m]) * COHERE * alpha;
+          vy[m] += (gcy[gm] - py[m]) * COHERE * alpha;
+        }
+        vx[m] -= px[m] * 0.012 * alpha;       // gentle centering, relaxes over time
+        vy[m] -= py[m] * 0.012 * alpha;
+        px[m] += vx[m] * alpha * 0.85; py[m] += vy[m] * alpha * 0.85;
+        vx[m] *= 0.86; vy[m] *= 0.86;
       }
     }
     var cx = 0, cy = 0;
@@ -351,17 +372,18 @@
       var isSel = n.id === state.sel, isNear = near && near[n.id];
       var isMatch = matched && matched(n);
       var dimd = (fid != null && !isNear) || (matched && !isMatch);
+      var col = n.color || C.accent;
       if (isSel || isHub(n) || isMatch) {
         ctx.beginPath(); ctx.arc(x, y, r + 6, 0, 7);
-        ctx.fillStyle = rgba(C.accent, isSel ? 0.20 : 0.10); ctx.fill();
+        ctx.fillStyle = rgba(col, isSel ? 0.24 : 0.12); ctx.fill();
       }
       if (isSel) {
         var pr = r + 6 + pulseT * 10;
         ctx.beginPath(); ctx.arc(x, y, pr, 0, 7);
-        ctx.strokeStyle = rgba(C.accent, 0.5 * (1 - pulseT)); ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.strokeStyle = rgba(col, 0.55 * (1 - pulseT)); ctx.lineWidth = 1.5; ctx.stroke();
       }
       ctx.beginPath(); ctx.arc(x, y, r, 0, 7);
-      ctx.fillStyle = dimd ? rgba(C.accent, 0.22) : C.accent;
+      ctx.fillStyle = dimd ? rgba(col, 0.20) : col;
       ctx.fill();
       ctx.lineWidth = 1; ctx.strokeStyle = C.ink; ctx.stroke();
     }
@@ -567,11 +589,14 @@
   }
 
   // ---- legend ---------------------------------------------------------------
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (m) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]; }); }
   function renderLegend() {
     if (cssW < 520 || GROUPS.length < 2) { LEGEND.classList.add("hide"); return; }
     LEGEND.classList.remove("hide");
-    LEGEND.innerHTML = '<div class="lg-t">prefix groups</div>' + GROUPS.map(function (gname) {
-      return '<div class="lg-row"><span class="lg-dot"></span>' + gname + '_</div>';
+    LEGEND.innerHTML = '<div class="lg-t">prefix groups</div>' + GROUPS.map(function (g) {
+      var label = g.name === "other" ? "other" : esc(g.name) + "_";
+      return '<div class="lg-row"><span class="lg-dot" style="background:' + g.color + '"></span>' + label + '</div>';
     }).join("");
   }
 
