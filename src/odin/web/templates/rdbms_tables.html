@@ -54,4 +54,4 @@
 <script id="web-data" type="application/json">{{ web_json|safe }}</script>
 {% endblock %}
 
-{% block scripts %}<script src="/static/rdbms_web.js" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/rdbms_web.js?v={{ asset_v }}" defer></script>{% endblock %}

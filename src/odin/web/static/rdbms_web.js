@@ -1,18 +1,18 @@
-/* Odin — RDBMS "table web": a canvas force-directed graph of a schema's tables
-   and their foreign keys, with a live preview panel.
+/* Odin — RDBMS "table web": a canvas graph of a schema's tables and their
+   foreign keys, with a live preview panel.
 
-   Per the design handoff (Table Web.dc.html) + agreed refinements:
-     - ONE client-side force pass on load (~300 iters), then a static render.
-       No permanent rAF loop, no animated links, no traveling dots. A bounded
-       rAF runs only during a layout-switch ease and while a node is selected
-       (the selection pulse).
-     - Single accent colour; node size by row estimate; glow on hub / selection /
-       filter match. Name-prefix groups drive WEB gravity anchors + a neutral
-       (uncoloured) legend only.
-     - Two layouts: WEB (force) and RING (bundled, prefix groups kept adjacent).
-     - >200 nodes: render only FK-connected tables + a "show all (N)" toggle.
-       >600 nodes: default to RING. <=10 tables: a plain radial, no sim.
-   Colours are read from CSS custom properties so the graph tracks the theme. */
+   Layout is fully DETERMINISTIC (no physics sim — that degenerated to a line on
+   sparse / star / two-group schemas). A FK graph is a forest of small
+   hierarchies plus a pile of unconnected tables, so:
+     - WEB      = split into connected components; each component is a radial
+                  tree from its most-referenced table; all FK-less tables go in
+                  one grid; the pieces are shelf-packed. Same result every run.
+     - RING     = every table on one circle, ordered by prefix group.
+     - CLUSTERS = one small grid per prefix group, groups around a ring.
+   Rendering: static canvas, redrawn on interaction only; a bounded rAF runs
+   just for the layout-switch ease and the selection pulse. Nodes are coloured
+   by prefix group (8-colour palette + grey "other"). Theme colours are read
+   from CSS custom properties. */
 (function () {
   "use strict";
   var host = document.getElementById("web-data");
@@ -60,7 +60,7 @@
 
   // prefix groups (before first "_"), the 8 most common get a vivid colour;
   // the long tail is "other" (neutral grey). Colour is purely visual — it does
-  // NOT drive the WEB layout (see layoutWeb).
+  // NOT drive the layout (which is deterministic — see layoutStructural).
   var PALETTE = ["#46c7f0", "#3fd08b", "#b98cff", "#f2b445",
                  "#6aa8ff", "#ff6f6b", "#8bd450", "#f078c8"];
   var OTHER_COLOR = "#5b6b7d";
@@ -107,132 +107,142 @@
     return s;
   }
 
-  // ---- layouts ------------------------------------------------------------
-  function rnd() { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; }
-  var seed = 20260902;
+  // ---- layouts (all deterministic — no physics) --------------------------
+  // A FK graph is almost always a forest of small hierarchies plus a lot of
+  // unconnected tables. So: split into connected components, lay each one out as
+  // a radial tree from its most-referenced table, drop every FK-less table into
+  // one tidy grid, then shelf-pack the pieces. Same result every time, on any
+  // schema shape — worst case is a boring grid, never a broken line.
+  var GAP = 34;
 
-  function layoutRadial(list) {
-    var R = Math.max(140, list.length * 14), pos = {};
-    var order = list.slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
-    order.forEach(function (n, i) {
-      var t = (i / order.length) * Math.PI * 2 - Math.PI / 2;
-      pos[n.id] = { x: Math.cos(t) * R, y: Math.sin(t) * R, a: t };
+  function components(list) {
+    var uf = {};
+    list.forEach(function (n) { uf[n.id] = n.id; });
+    function find(x) { while (uf[x] !== x) { uf[x] = uf[uf[x]]; x = uf[x]; } return x; }
+    links.forEach(function (l) {
+      if (uf[l.a] != null && uf[l.b] != null) uf[find(l.a)] = find(l.b);
     });
-    return pos;
+    var g = {};
+    list.forEach(function (n) { var r = find(n.id); (g[r] = g[r] || []).push(n.id); });
+    return Object.keys(g).map(function (k) { return g[k]; })
+      .sort(function (a, b) { return b.length - a.length; });
   }
 
-  function layoutRing(list) {
-    var order = list.slice().sort(function (a, b) { return (a.g - b.g) || a.name.localeCompare(b.name); });
-    var R = 360, pos = {};
-    order.forEach(function (n, i) {
-      var t = (i / order.length) * Math.PI * 2 - Math.PI / 2;
-      pos[n.id] = { x: Math.cos(t) * R, y: Math.sin(t) * R, a: t };
-    });
-    return pos;
+  function ordCmp(A, aid, bid) {
+    return (A[aid].g - A[bid].g) || A[aid].name.localeCompare(A[bid].name);
   }
 
-  // CLUSTERS — one compact grid per prefix group, groups placed around a ring
-  function layoutGrid(list) {
-    var pos = {}, R = 380;
-    for (var gi = 0; gi < NG; gi++) {
-      var mem = list.filter(function (n) { return n.g === gi; });
-      if (!mem.length) continue;
-      mem.sort(function (a, b) { return a.name.localeCompare(b.name); });
-      var ang = (gi / NG) * Math.PI * 2 - Math.PI / 2;
-      var cx = Math.cos(ang) * R, cy = Math.sin(ang) * R * 0.86;
-      var cols = Math.max(1, Math.ceil(Math.sqrt(mem.length * 1.4)));
-      var rows = Math.ceil(mem.length / cols);
-      var gap = 26;
-      mem.forEach(function (n, i) {
-        var gx = (i % cols) - (cols - 1) / 2;
-        var gy = Math.floor(i / cols) - (rows - 1) / 2;
-        pos[n.id] = { x: cx + gx * gap, y: cy + gy * gap };
+  // one connected component -> a radial tree, centred on (0,0)
+  function radialBox(comp, A) {
+    if (comp.length === 1) return { ids: comp, w: GAP + 8, h: GAP + 8, local: (function () { var o = {}; o[comp[0]] = { x: 0, y: 0 }; return o; })() };
+    var root = comp.reduce(function (r, id) { return A[id].deg > A[r].deg ? id : r; }, comp[0]);
+    var rank = {}, seen = {}, q = [root];
+    rank[root] = 0; seen[root] = 1;
+    while (q.length) {
+      var u = q.shift();
+      (adj[u] || []).forEach(function (e) {
+        if (!A[e.o] || seen[e.o]) return;
+        seen[e.o] = 1; rank[e.o] = rank[u] + 1; q.push(e.o);
       });
     }
+    comp.forEach(function (id) { if (rank[id] == null) rank[id] = 1; });   // safety for odd graphs
+    var byRank = {};
+    comp.forEach(function (id) { (byRank[rank[id]] = byRank[rank[id]] || []).push(id); });
+    var local = {}, maxR = 0;
+    Object.keys(byRank).map(Number).sort(function (a, b) { return a - b; }).forEach(function (rk) {
+      var ring = byRank[rk].sort(function (a, b) { return ordCmp(A, a, b); });
+      if (rk === 0 && ring.length === 1) { local[ring[0]] = { x: 0, y: 0 }; return; }
+      // radius grows per rank but tapers, so a deep chain coils instead of
+      // shooting off in a 2000px spike
+      var base = rk <= 5 ? rk * 120 : 600 + (rk - 5) * 44;
+      var rad = Math.max((rk ? base : 70), ring.length * 46 / (2 * Math.PI));
+      maxR = Math.max(maxR, rad);
+      var off = (rk % 2) ? Math.PI / ring.length : 0;
+      ring.forEach(function (id, i) {
+        var ang = (i / ring.length) * Math.PI * 2 - Math.PI / 2 + off;
+        local[id] = { x: Math.cos(ang) * rad, y: Math.sin(ang) * rad };
+      });
+    });
+    return { ids: comp, w: maxR * 2 + 56, h: maxR * 2 + 56, local: local };
+  }
+
+  // every FK-less table -> one grid block
+  function gridBox(ids, A) {
+    ids = ids.slice().sort(function (a, b) { return ordCmp(A, a, b); });
+    var cols = Math.max(1, Math.ceil(Math.sqrt(ids.length * 1.7)));
+    var g = 30, local = {};
+    ids.forEach(function (id, i) { local[id] = { x: (i % cols) * g, y: Math.floor(i / cols) * g }; });
+    var w = (cols - 1) * g, h = (Math.ceil(ids.length / cols) - 1) * g;
+    ids.forEach(function (id) { local[id].x -= w / 2; local[id].y -= h / 2; });
+    return { ids: ids, w: w + 44, h: h + 44, local: local };
+  }
+
+  function packBoxes(boxes) {
+    boxes.sort(function (a, b) { return Math.max(b.w, b.h) - Math.max(a.w, a.h); });
+    var area = boxes.reduce(function (s, b) { return s + (b.w + GAP) * (b.h + GAP); }, 0);
+    var targetW = Math.max(560, Math.sqrt(area) * 1.5);
+    var x = 0, y = 0, shelfH = 0, out = {};
+    boxes.forEach(function (b) {
+      if (x > 0 && x + b.w > targetW) { x = 0; y += shelfH + GAP; shelfH = 0; }
+      var ox = x + b.w / 2, oy = y + b.h / 2;
+      b.ids.forEach(function (id) { out[id] = { x: b.local[id].x + ox, y: b.local[id].y + oy }; });
+      x += b.w + GAP; shelfH = Math.max(shelfH, b.h);
+    });
+    var xs = [], ys = [];
+    Object.keys(out).forEach(function (id) { xs.push(out[id].x); ys.push(out[id].y); });
+    var cx = (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2;
+    var cy = (Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2;
+    Object.keys(out).forEach(function (id) { out[id].x -= cx; out[id].y -= cy; });
+    return out;
+  }
+
+  function layoutStructural(list) {
+    var A = {}; list.forEach(function (n) { A[n.id] = n; });
+    var comps = components(list);
+    var boxes = [], singles = [];
+    comps.forEach(function (c) { if (c.length === 1) singles.push(c[0]); else boxes.push(radialBox(c, A)); });
+    if (singles.length) boxes.push(gridBox(singles, A));
+    if (!boxes.length) return {};
+    return packBoxes(boxes);
+  }
+
+  // RING — every table on one circle, grouped so colours arc together
+  function layoutRing(list) {
+    var order = list.slice().sort(function (a, b) { return (a.g - b.g) || a.name.localeCompare(b.name); });
+    var R = Math.max(200, order.length * 6), pos = {};
+    order.forEach(function (n, i) {
+      var t = (i / order.length) * Math.PI * 2 - Math.PI / 2;
+      pos[n.id] = { x: Math.cos(t) * R, y: Math.sin(t) * R, a: t };
+    });
     return pos;
   }
 
-  function layoutWeb(list) {
-    seed = 20260902;
-    var n = list.length;
-    var idx = {}; list.forEach(function (nd, i) { idx[nd.id] = i; });
-    var px = new Float64Array(n), py = new Float64Array(n), vx = new Float64Array(n), vy = new Float64Array(n);
-    var grp = new Int32Array(n);
-    // golden-angle spiral seed — even coverage, no axis/colinear bias
-    var GA = Math.PI * (3 - Math.sqrt(5));
-    for (var i = 0; i < n; i++) {
-      var rr = 13 * Math.sqrt(i + 1), aa = i * GA;
-      px[i] = Math.cos(aa) * rr + (rnd() - 0.5) * 8;
-      py[i] = Math.sin(aa) * rr + (rnd() - 0.5) * 8;
-      grp[i] = list[i].g;
-    }
-    var LL = [];
-    links.forEach(function (l) {
-      if (idx[l.a] != null && idx[l.b] != null) LL.push([idx[l.a], idx[l.b]]);
+  // CLUSTERS — one grid per prefix group, groups placed around a ring
+  function layoutGrid(list) {
+    var pos = {}, groupsUsed = [];
+    for (var gi = 0; gi < NG; gi++) if (list.some(function (n) { return n.g === gi; })) groupsUsed.push(gi);
+    var R = Math.max(320, groupsUsed.length * 70);
+    groupsUsed.forEach(function (gi, gk) {
+      var mem = list.filter(function (n) { return n.g === gi; })
+        .sort(function (a, b) { return a.name.localeCompare(b.name); });
+      var ang = (gk / groupsUsed.length) * Math.PI * 2 - Math.PI / 2;
+      var cx = Math.cos(ang) * R, cy = Math.sin(ang) * R * 0.82;
+      var cols = Math.max(1, Math.ceil(Math.sqrt(mem.length * 1.4)));
+      var rows = Math.ceil(mem.length / cols), gap = 26;
+      mem.forEach(function (n, i) {
+        pos[n.id] = {
+          x: cx + ((i % cols) - (cols - 1) / 2) * gap,
+          y: cy + (Math.floor(i / cols) - (rows - 1) / 2) * gap
+        };
+      });
     });
-    var ITERS = n > 700 ? 110 : n > 400 ? 170 : 320;
-    var REP = 2400, CUT = 250000;           // repel within ~500px
-    var SPRING_L = 74, SPRING_K = 0.045;
-    var COHERE = NG >= 3 ? 0.010 : 0;       // gentle same-colour cohesion, never a well
-    var gcx = new Float64Array(NG), gcy = new Float64Array(NG), gcn = new Int32Array(NG);
-    for (var it = 0; it < ITERS; it++) {
-      var alpha = 1 - it / ITERS;
-      if (COHERE) {
-        gcx.fill(0); gcy.fill(0); gcn.fill(0);
-        for (var c0 = 0; c0 < n; c0++) { var g0 = grp[c0]; gcx[g0] += px[c0]; gcy[g0] += py[c0]; gcn[g0]++; }
-        for (var g1 = 0; g1 < NG; g1++) if (gcn[g1]) { gcx[g1] /= gcn[g1]; gcy[g1] /= gcn[g1]; }
-      }
-      for (var p = 0; p < n; p++) {
-        for (var q = p + 1; q < n; q++) {
-          var dx = px[q] - px[p], dy = py[q] - py[p], d2 = dx * dx + dy * dy;
-          if (d2 > CUT || d2 === 0) continue;
-          var d = Math.sqrt(d2), f = REP / d2;
-          var ux = dx / d * f, uy = dy / d * f;
-          vx[p] -= ux; vy[p] -= uy; vx[q] += ux; vy[q] += uy;
-        }
-      }
-      for (var k = 0; k < LL.length; k++) {
-        var A = LL[k][0], B = LL[k][1];
-        var lx = px[B] - px[A], ly = py[B] - py[A];
-        var ld = Math.hypot(lx, ly) || 1, lf = (ld - SPRING_L) * SPRING_K;
-        var lux = lx / ld * lf, luy = ly / ld * lf;
-        vx[A] += lux; vy[A] += luy; vx[B] -= lux; vy[B] -= luy;
-      }
-      for (var m = 0; m < n; m++) {
-        if (COHERE) {
-          var gm = grp[m];
-          vx[m] += (gcx[gm] - px[m]) * COHERE * alpha;
-          vy[m] += (gcy[gm] - py[m]) * COHERE * alpha;
-        }
-        vx[m] -= px[m] * 0.012 * alpha;       // gentle centering, relaxes over time
-        vy[m] -= py[m] * 0.012 * alpha;
-        px[m] += vx[m] * alpha * 0.85; py[m] += vy[m] * alpha * 0.85;
-        vx[m] *= 0.86; vy[m] *= 0.86;
-      }
-    }
-    var cx = 0, cy = 0;
-    for (var c = 0; c < n; c++) { cx += px[c] / n; cy += py[c] / n; }
-    var rad = [];
-    for (var r = 0; r < n; r++) rad.push(Math.hypot(px[r] - cx, py[r] - cy));
-    var r92 = rad.slice().sort(function (a, b) { return a - b; })[Math.floor(n * 0.92)] || 1;
-    var s = 360 / r92, cap = r92 * 1.25, pos = {};
-    for (var w = 0; w < n; w++) {
-      var ddx = px[w] - cx, ddy = py[w] - cy, rr = Math.hypot(ddx, ddy) || 1;
-      if (rr > cap) { ddx *= cap / rr; ddy *= cap / rr; }
-      pos[list[w].id] = { x: ddx * s, y: ddy * s };
-    }
     return pos;
   }
 
   var LAYOUTS = {};
   function buildLayouts() {
     var list = activeNodes();
-    if (list.length <= 10) {
-      var rad = layoutRadial(list);
-      LAYOUTS = { web: rad, ring: rad, grid: rad };
-      return;
-    }
-    LAYOUTS = { web: layoutWeb(list), ring: layoutRing(list), grid: layoutGrid(list) };
+    LAYOUTS = { web: layoutStructural(list), ring: layoutRing(list), grid: layoutGrid(list) };
   }
   buildLayouts();
 

@@ -9,7 +9,8 @@ revisit later:
 
 | # | Handoff says | Built | Why |
 |---|---|---|---|
-| Motion | permanent rAF loop, animated links, 16 traveling dots | one ~300-iter force pass on load (160 for n>400), static render; bounded rAF only for the layout-switch ease + selection pulse | answer 1 |
+| Motion | permanent rAF loop, animated links, 16 traveling dots | static render; bounded rAF only for the layout-switch ease + selection pulse | answer 1 |
+| Layout | force-directed sim | **deterministic** — see "Fix 3" below. The hand-rolled physics degenerated on real schemas | pragmatism |
 | Layouts | WEB / RING / CLUSTERS | all three (CLUSTERS re-added 2026-09-02 after user feedback); RING sorts by (prefix-group, name), CLUSTERS = a grid per prefix group around a ring | answer 4 → reversed on request |
 | Node colour | 6 semantic clusters, colour-coded | **colour-coded by prefix group** (8-colour palette + grey "other"), size by `reltuples`, group-coloured glow on hub/selection/filter-match, coloured legend (re-added 2026-09-02 on request; answer 3 said single accent). Colour is decoupled from layout — it does NOT pull nodes into wells. | answer 3 → reversed on request |
 | Scale | tuned for 186/400 | >200 nodes → only degree≥1 shown + "show all (N)" toggle; >600 → default RING; ≤10 → radial, no sim | answer 5 |
@@ -67,6 +68,33 @@ Rewrote `layoutWeb` as a plain force layout, no per-group wells:
 Probed aspect ratio (min/max bbox side): NG=1 → 0.97, NG=2 → 0.89, NG=9 skewed
 → 0.93 — all well-formed 2-D blobs. Group anchors are still used by CLUSTERS and
 the RING sort order.
+
+## Fix 3 — dropped the force sim entirely for a deterministic layout (2026-09-02)
+
+The spiral-seed force layout *still* produced a straight line for the user. Two
+compounding reasons: (a) a hand-rolled 300-iteration physics sim is inherently
+fragile across schema shapes (sparse edges, star topologies, deep chains all
+break it differently), and (b) **the browser was serving the cached v1 of
+`rdbms_web.js`** — no cache-busting on `/static`.
+
+Both fixed:
+- **Cache-busting.** `app._asset_version()` = max mtime of `web/static/**`,
+  exposed as the `asset_v` Jinja global; `base.html` + `rdbms_tables.html` now
+  load `app.css` / `app.js` / `rdbms_web.js` with `?v={{ asset_v }}`. Changing a
+  static file (or restarting the dev server after an edit) busts the cache.
+- **Deterministic layout** (`layoutStructural`, no physics). A FK graph is a
+  forest of small hierarchies + a pile of unconnected tables:
+  1. union-find the FK graph into connected components;
+  2. each multi-node component → a **radial tree** from its highest-degree table
+     (BFS ranks on tapering concentric arcs; deep chains coil instead of
+     spiking);
+  3. every FK-less table → **one grid block**;
+  4. shelf-pack the component boxes + the grid, recentre on origin.
+  RING and CLUSTERS are likewise pure geometry. Probed across STAR (aspect 1.0),
+  2-GROUP-SPARSE (0.92), MOSTLY-ISLANDS (0.68), NO-FKS (tidy grid) — no
+  degenerate output. Worst case is a boring grid, never a broken line.
+- Node colour by prefix group is unchanged (Fix 1); it's cosmetic only and does
+  not influence the layout.
 
 ## Open items / things to address later
 

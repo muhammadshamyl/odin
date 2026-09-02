@@ -61,6 +61,18 @@ def _compact(n) -> str:
 
 _TEMPLATES.env.filters["compact"] = _compact
 
+# cache-buster for /static assets — max mtime of the static tree, so a changed
+# file (and a server restart during dev) forces the browser to refetch.
+def _asset_version() -> int:
+    latest = 0
+    for p in (_HERE / "static").rglob("*"):
+        if p.is_file():
+            latest = max(latest, int(p.stat().st_mtime))
+    return latest or int(time.time())
+
+
+_TEMPLATES.env.globals["asset_v"] = _asset_version()
+
 
 def _reconcile_stale_runs() -> None:
     """A `run_log` row still 'running' at startup can't actually be running — the
