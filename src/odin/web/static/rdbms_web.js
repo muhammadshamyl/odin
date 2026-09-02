@@ -588,8 +588,11 @@
     }
     drag = null;
   });
-  canvas.addEventListener("wheel", function (e) {
+  // listen on the whole stage (not just the canvas) so a wheel over the legend /
+  // zoom / hint chips is captured too and never scrolls the page
+  canvas.parentElement.addEventListener("wheel", function (e) {
     e.preventDefault();
+    e.stopPropagation();
     var pr = canvas.getBoundingClientRect();
     var mx = e.clientX - pr.left, my = e.clientY - pr.top;
     var wx = (mx - view.x) / view.k, wy = (my - view.y) / view.k;

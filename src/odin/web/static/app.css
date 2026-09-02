@@ -1325,7 +1325,8 @@ li.CodeMirror-hint-active{background:var(--phos-soft); color:var(--text)}
   /* fixed width + min-width:0 so a wide sample table inside can't inflate the
      flex item and bump the panel onto its own row below the graph */
   flex:0 0 340px; min-width:0; align-self:stretch;
-  display:flex; flex-direction:column; overflow:hidden;
+  display:flex; flex-direction:column;
+  overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain;
   background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
   padding:18px 18px 20px;
 }
@@ -1354,7 +1355,7 @@ li.CodeMirror-hint-active{background:var(--phos-soft); color:var(--text)}
 .tweb-toolbar .tw-showall:hover{border-color:var(--accent); color:var(--accent)}
 .tweb-toolbar .tw-showall.on{background:var(--accent-soft); border-color:var(--accent); color:var(--accent)}
 
-.tweb-stage{position:relative; flex:1; min-height:600px}
+.tweb-stage{position:relative; flex:1; min-height:600px; overscroll-behavior:contain; touch-action:none}
 .tweb-canvas{position:absolute; inset:0; width:100%; height:100%; display:block; cursor:grab; touch-action:none}
 .tweb-canvas.grabbing{cursor:grabbing}
 
@@ -1404,7 +1405,7 @@ li.CodeMirror-hint-active{background:var(--phos-soft); color:var(--text)}
 .pnl-sec{font:500 10px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--text-soft); margin:0 0 7px}
 .pnl-sample{
   border:1px solid var(--border); border-radius:var(--radius-sm); overflow:auto;
-  max-height:190px; background:var(--panel-2);
+  overscroll-behavior:contain; max-height:190px; background:var(--panel-2);
 }
 .pnl-sample table{border-collapse:collapse; width:100%}
 .pnl-sample th{
@@ -1421,7 +1422,7 @@ li.CodeMirror-hint-active{background:var(--phos-soft); color:var(--text)}
 .pnl-sample tr:last-child td{border-bottom:0}
 .pnl-prov{font:400 10px/1.4 var(--mono); color:var(--text-faint); margin:6px 0 2px}
 .pnl-note{font:400 10px/1.4 var(--font); color:var(--text-faint)}
-.pnl-linked{border:1px solid var(--border); border-radius:var(--radius-sm); overflow:auto; max-height:150px}
+.pnl-linked{border:1px solid var(--border); border-radius:var(--radius-sm); overflow:auto; overscroll-behavior:contain; max-height:150px}
 .pnl-linked .lk{
   display:flex; align-items:center; gap:8px; width:100%; text-align:left;
   padding:7px 9px; background:transparent; border:0; border-bottom:1px solid var(--border-soft);
