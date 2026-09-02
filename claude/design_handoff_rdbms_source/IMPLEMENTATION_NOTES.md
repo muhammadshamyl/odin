@@ -96,6 +96,26 @@ Both fixed:
 - Node colour by prefix group is unchanged (Fix 1); it's cosmetic only and does
   not influence the layout.
 
+## Colour grouping (2026-09-02, after "the greys" feedback)
+
+- **16-hue curated palette** for the biggest groups; every group past that gets a
+  deterministic `hslHex(hash(key))`. **No grey "other" bucket** — every group is
+  coloured.
+- **Grouping strategy auto-picks:**
+  - *prefix* (before the first `_`) when it yields real groups — `≥ 2` prefixes
+    with `≥ 2` members and `≥ 35 %` coverage;
+  - otherwise *FK connected component* — so a schema whose tables share no
+    prefixes (`customers`, `orders`, …) still colours by "what relates to what".
+    Each multi-table component is a group labelled by its hub (`orders +4`);
+    FK-less tables are one legend entry "unlinked", each tinted (low-sat) by name
+    so name-families still read.
+- Legend shows the 12 biggest groups + "+N more", titled "prefix groups" or
+  "linked groups"; hidden when there's `< 2` groups or the canvas is narrow.
+- `groupColor` must stay hex — the canvas `rgba()` helper only parses hex, hence
+  `hslHex` rather than raw `hsl()` strings.
+- 100 distinct categorical colours isn't useful (indistinguishable past ~12), so
+  the cap is "curated + hashed", not a 100-entry table.
+
 ## Open items / things to address later
 
 1. **Fonts.** Answer 10's premise ("Chakra Petch not loaded") is wrong — `base.html`

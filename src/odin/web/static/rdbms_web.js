@@ -11,7 +11,9 @@
      - CLUSTERS = one small grid per prefix group, groups around a ring.
    Rendering: static canvas, redrawn on interaction only; a bounded rAF runs
    just for the layout-switch ease and the selection pulse. Nodes are coloured
-   by prefix group (8-colour palette + grey "other"). Theme colours are read
+   by group — table-name prefix when that yields real groups, otherwise FK
+   connected component; a 16-hue curated palette for the biggest groups and a
+   hashed HSL for the long tail (never a flat grey). Theme colours are read
    from CSS custom properties. */
 (function () {
   "use strict";
@@ -58,29 +60,98 @@
   var adj = nodes.map(function () { return []; });
   links.forEach(function (l, i) { adj[l.a].push({ o:l.b, i:i }); adj[l.b].push({ o:l.a, i:i }); });
 
-  // prefix groups (before first "_"), the 8 most common get a vivid colour;
-  // the long tail is "other" (neutral grey). Colour is purely visual — it does
-  // NOT drive the layout (which is deterministic — see layoutStructural).
-  var PALETTE = ["#46c7f0", "#3fd08b", "#b98cff", "#f2b445",
-                 "#6aa8ff", "#ff6f6b", "#8bd450", "#f078c8"];
-  var OTHER_COLOR = "#5b6b7d";
-  var counts = {};
-  nodes.forEach(function (n) {
-    var p = (n.name.split("_")[0] || n.name).toLowerCase();
-    counts[p] = (counts[p] || 0) + 1;
-  });
-  var top = Object.keys(counts)
-    .sort(function (a, b) { return counts[b] - counts[a] || a.localeCompare(b); })
-    .slice(0, 8);
-  var groupIx = {}; top.forEach(function (p, i) { groupIx[p] = i; });
-  var GROUPS = top.map(function (p, i) { return { name: p, color: PALETTE[i] }; });
-  var hasOther = false;
-  nodes.forEach(function (n) {
-    var p = (n.name.split("_")[0] || n.name).toLowerCase();
-    if (p in groupIx) { n.g = groupIx[p]; n.gp = p; n.color = PALETTE[groupIx[p]]; }
-    else { n.g = top.length; n.gp = "other"; n.color = OTHER_COLOR; hasOther = true; }
-  });
-  if (hasOther) GROUPS.push({ name: "other", color: OTHER_COLOR });
+  // ---- colour groups --------------------------------------------------------
+  // Colour is purely visual — it never drives the layout. Every group gets a
+  // colour: a curated, well-separated palette for the biggest groups, then a
+  // deterministic HSL hashed from the group key for the long tail. No grey
+  // "other" bucket. Grouping strategy is auto-picked:
+  //   * table-name prefix (before the first "_") when that yields real groups;
+  //   * otherwise the connected components of the FK graph (so a schema whose
+  //     tables have no shared prefixes still colours by "what relates to what").
+  var PALETTE = [
+    "#46c7f0", "#3fd08b", "#b98cff", "#f2b445", "#6aa8ff", "#ff6f6b",
+    "#8bd450", "#f078c8", "#4de0c8", "#ffa24d", "#9db4ff", "#d98cf0",
+    "#8fd98c", "#f2c14d", "#ff8fa8", "#6fd3ff"
+  ];
+  function hashHue(s) {
+    var h = 0;
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    return ((h % 360) + 360) % 360;
+  }
+  function hslHex(h, s, l) {
+    h /= 360;
+    var q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+    function ch(t) {
+      if (t < 0) t += 1; if (t > 1) t -= 1;
+      var v = t < 1 / 6 ? p + (q - p) * 6 * t
+            : t < 1 / 2 ? q
+            : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p;
+      return Math.round(v * 255);
+    }
+    return "#" + ((1 << 24) + (ch(h + 1 / 3) << 16) + (ch(h) << 8) + ch(h - 1 / 3)).toString(16).slice(1);
+  }
+  function groupColor(rank, key) {
+    // keep to hex — the rgba() helper only parses hex
+    return rank < PALETTE.length ? PALETTE[rank]
+      : hslHex((hashHue(key) + rank * 47) % 360, 0.58, 0.66);
+  }
+
+  function prefixKey(n) {
+    var p = n.name.split("_")[0];
+    return (p && p !== n.name ? p : n.name).toLowerCase();
+  }
+
+  var GROUPS, GROUP_MODE;
+  (function assignGroups() {
+    // strategy A — prefix
+    var pc = {};
+    nodes.forEach(function (n) { var k = prefixKey(n); pc[k] = (pc[k] || 0) + 1; });
+    var pkeys = Object.keys(pc);
+    var shared = pkeys.filter(function (k) { return pc[k] >= 2; });
+    var coverage = shared.reduce(function (s, k) { return s + pc[k]; }, 0) / nodes.length;
+
+    if (shared.length >= 2 && coverage >= 0.35) {
+      GROUP_MODE = "prefix";
+      var ranked = pkeys.sort(function (a, b) { return pc[b] - pc[a] || a.localeCompare(b); });
+      var ix = {}; ranked.forEach(function (k, i) { ix[k] = i; });
+      GROUPS = ranked.map(function (k, i) {
+        return { key: k, label: k + "_", color: groupColor(i, k), n: pc[k] };
+      });
+      nodes.forEach(function (n) {
+        var k = prefixKey(n);
+        n.g = ix[k]; n.gp = k; n.color = GROUPS[ix[k]].color;
+      });
+      return;
+    }
+
+    // strategy B — FK connected components
+    GROUP_MODE = "component";
+    var uf = nodes.map(function (_, i) { return i; });
+    function find(x) { while (uf[x] !== x) { uf[x] = uf[uf[x]]; x = uf[x]; } return x; }
+    links.forEach(function (l) { uf[find(l.a)] = find(l.b); });
+    var comp = {};
+    nodes.forEach(function (n) { var r = find(n.id); (comp[r] = comp[r] || []).push(n); });
+    var multi = [], iso = [];
+    Object.keys(comp).forEach(function (r) { (comp[r].length > 1 ? multi : iso).push(comp[r]); });
+    multi.sort(function (a, b) { return b.length - a.length; });
+    GROUPS = multi.map(function (members, i) {
+      var hub = members.reduce(function (h, m) { return m.deg > h.deg ? m : h; }, members[0]);
+      var g = { key: "c" + i, label: hub.name + (members.length > 1 ? " +" + (members.length - 1) : ""),
+                color: groupColor(i, "c" + i + hub.name), n: members.length };
+      members.forEach(function (m) { m.g = i; m.gp = g.key; m.color = g.color; });
+      return g;
+    });
+    var isoNodes = iso.reduce(function (a, c) { return a.concat(c); }, []);
+    if (isoNodes.length) {
+      var gi = GROUPS.length;
+      // one legend entry, but tint each by its name so name-families still read
+      GROUPS.push({ key: "unlinked", label: "unlinked", color: "#8aa0b3", n: isoNodes.length });
+      isoNodes.forEach(function (m) {
+        m.g = gi; m.gp = "unlinked";
+        m.color = hslHex(hashHue(prefixKey(m)), 0.34, 0.6);   // muted, tinted by name
+      });
+    }
+  })();
   var NG = GROUPS.length;
 
   var maxDeg = nodes.reduce(function (m, n) { return Math.max(m, n.deg); }, 0);
@@ -601,13 +672,21 @@
   // ---- legend ---------------------------------------------------------------
   function esc(s) { return String(s).replace(/[&<>"]/g, function (m) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]; }); }
+  var LEGEND_MAX = 12;
   function renderLegend() {
     if (cssW < 520 || GROUPS.length < 2) { LEGEND.classList.add("hide"); return; }
     LEGEND.classList.remove("hide");
-    LEGEND.innerHTML = '<div class="lg-t">prefix groups</div>' + GROUPS.map(function (g) {
-      var label = g.name === "other" ? "other" : esc(g.name) + "_";
-      return '<div class="lg-row"><span class="lg-dot" style="background:' + g.color + '"></span>' + label + '</div>';
+    var ordered = GROUPS.slice().sort(function (a, b) { return b.n - a.n; });
+    var shown = ordered.slice(0, LEGEND_MAX);
+    var title = GROUP_MODE === "prefix" ? "prefix groups" : "linked groups";
+    var rows = shown.map(function (g) {
+      return '<div class="lg-row"><span class="lg-dot" style="background:' + g.color + '"></span>' +
+             esc(g.label) + '<span class="lg-n">' + g.n + '</span></div>';
     }).join("");
+    if (ordered.length > LEGEND_MAX) {
+      rows += '<div class="lg-row lg-more">+' + (ordered.length - LEGEND_MAX) + ' more</div>';
+    }
+    LEGEND.innerHTML = '<div class="lg-t">' + title + '</div>' + rows;
   }
 
   // ---- boot -------------------------------------------------------------
