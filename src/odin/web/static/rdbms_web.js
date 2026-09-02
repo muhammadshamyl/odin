@@ -237,10 +237,10 @@
     return { ids: comp, w: maxR * 2 + 56, h: maxR * 2 + 56, local: local };
   }
 
-  // every FK-less table -> one grid block
+  // every FK-less table -> one wide grid band, centred on (0,0)
   function gridBox(ids, A) {
     ids = ids.slice().sort(function (a, b) { return ordCmp(A, a, b); });
-    var cols = Math.max(1, Math.ceil(Math.sqrt(ids.length * 1.7)));
+    var cols = Math.max(1, Math.min(ids.length, Math.round(Math.sqrt(ids.length) * 2.4)));
     var g = 30, local = {};
     ids.forEach(function (id, i) { local[id] = { x: (i % cols) * g, y: Math.floor(i / cols) * g }; });
     var w = (cols - 1) * g, h = (Math.ceil(ids.length / cols) - 1) * g;
@@ -270,11 +270,31 @@
   function layoutStructural(list) {
     var A = {}; list.forEach(function (n) { A[n.id] = n; });
     var comps = components(list);
-    var boxes = [], singles = [];
-    comps.forEach(function (c) { if (c.length === 1) singles.push(c[0]); else boxes.push(radialBox(c, A)); });
-    if (singles.length) boxes.push(gridBox(singles, A));
-    if (!boxes.length) return {};
-    return packBoxes(boxes);
+    var compBoxes = [], singles = [];
+    comps.forEach(function (c) {
+      if (c.length === 1) singles.push(c[0]); else compBoxes.push(radialBox(c, A));
+    });
+    var out = compBoxes.length ? packBoxes(compBoxes) : {};
+
+    // FK-less tables: a wide band centred *under* the connected graph, not
+    // packed into a corner of it
+    if (singles.length) {
+      var gb = gridBox(singles, A);
+      var ys = Object.keys(out).map(function (id) { return out[id].y; });
+      var top = ys.length ? Math.max.apply(null, ys) + 80 + gb.h / 2 : 0;
+      singles.forEach(function (id) {
+        out[id] = { x: gb.local[id].x, y: gb.local[id].y + top };
+      });
+    }
+
+    var ids = Object.keys(out);
+    if (!ids.length) return out;
+    var xs = ids.map(function (id) { return out[id].x; });
+    var yy = ids.map(function (id) { return out[id].y; });
+    var cx = (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2;
+    var cy = (Math.min.apply(null, yy) + Math.max.apply(null, yy)) / 2;
+    ids.forEach(function (id) { out[id].x -= cx; out[id].y -= cy; });
+    return out;
   }
 
   // RING — every table on one circle, grouped so colours arc together
@@ -473,25 +493,30 @@
     collectBoxes();
     ctx.font = "500 11px 'IBM Plex Mono', ui-monospace, monospace";
     ctx.textBaseline = "middle";
+    var activeCount = 0; for (var _k in act) activeCount++;
+    // when the graph is small, or zoomed in, just show every name
+    var allLabels = view.k > 1.05 || activeCount <= 48;
     for (var p = 0; p < nodes.length; p++) {
       var nd = nodes[p];
       if (!act[nd.id]) continue;
       var sel2 = nd.id === state.sel;
-      var show = sel2
-        || (near && near[nd.id] && view.k > 0.5)
+      var hov = nd.id === state.hover;
+      var always = sel2 || hov;                       // never gated, never skipped for collisions
+      var show = always
+        || (near && near[nd.id])                      // focus + its neighbours (no zoom gate)
         || (matched && matched(nd))
-        || (fid == null && (view.k > 1.5 || nd.deg > 9));
+        || (fid == null && (allLabels || isHub(nd)));
       if (!show) continue;
       var lx = sx(nd.x), ly = sy(nd.y), r2 = nodeR(nd);
-      var label = nd.name.length > 26 ? nd.name.slice(0, 25) + "…" : nd.name;
+      var label = nd.name.length > 28 ? nd.name.slice(0, 27) + "…" : nd.name;
       var tw = ctx.measureText(label).width;
       var leftHalf = state.layout === "ring" && nd.x < 0;
       var tx = leftHalf ? lx - r2 - 6 - tw : lx + r2 + 6;
-      var bx0 = tx - 3, bx1 = tx + tw + 3, by0 = ly - 8, by1 = ly + 8;
-      if (!sel2 && hitsBox(bx0, by0, bx1, by1)) continue;
-      ctx.fillStyle = rgba(C.ink, 0.72);
+      var bx0 = tx - 3, bx1 = tx + tw + 3, by0 = ly - 8;
+      if (!always && hitsBox(bx0, by0, bx1, ly + 8)) continue;
+      ctx.fillStyle = rgba(C.ink, always ? 0.86 : 0.72);
       ctx.fillRect(bx0, by0, bx1 - bx0, 16);
-      ctx.fillStyle = sel2 ? C.text : C.soft;
+      ctx.fillStyle = always ? C.text : C.soft;
       ctx.fillText(label, tx, ly + 1);
     }
 
