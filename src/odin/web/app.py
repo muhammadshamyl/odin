@@ -655,7 +655,7 @@ def onboard_rdbms_tables(request: Request, connection_id: str, schema: str):
     }
     return _render(request, "rdbms_tables.html", connection_id=connection_id,
                    meta=meta, schema=schema, tables=tables, edges=edges,
-                   web_json=json.dumps(web, separators=(",", ":")))
+                   web_json=json.dumps(web, separators=(",", ":")).replace("<", "\\u003c"))
 
 
 @app.get("/onboard/rdbms/{connection_id}/{schema}/{table}/panel",

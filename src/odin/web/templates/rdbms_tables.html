@@ -16,13 +16,14 @@
   <div class="tweb-graph">
     <span class="tweb-corner"></span>
     <div class="tweb-toolbar">
-      <span class="tw-count">{{ tables|length }} table{{ '' if tables|length == 1 else 's' }}</span>
+      <span class="tw-count" id="tw-count">{{ tables|length }} table{{ '' if tables|length == 1 else 's' }}</span>
       <span class="tw-meta">{{ edges|length }} foreign-key link{{ '' if edges|length == 1 else 's' }}</span>
       <input class="tw-filter" id="tw-filter" type="search" placeholder="filter tables…" autocomplete="off" spellcheck="false">
       <button type="button" class="tw-showall" id="tw-showall" hidden></button>
       <div class="segbar segbar-sm" role="radiogroup" aria-label="Layout">
         <label class="seg"><input type="radio" name="tw-layout" value="web" checked><span>WEB</span></label>
         <label class="seg"><input type="radio" name="tw-layout" value="ring"><span>RING</span></label>
+        <label class="seg"><input type="radio" name="tw-layout" value="grid"><span>CLUSTERS</span></label>
       </div>
     </div>
     <div class="tweb-stage">

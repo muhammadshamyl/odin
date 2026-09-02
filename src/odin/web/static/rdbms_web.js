@@ -82,8 +82,9 @@
 
   // ---- scale rules ----------------------------------------------------------
   var TOTAL = nodes.length;
-  var LARGE = TOTAL > 200;
-  var showAll = !LARGE;               // <=200 always shows everything
+  var LARGE = TOTAL > 220;            // offer the "FK-linked only" declutter toggle
+  var HUGE = TOTAL > 1500;            // safety valve: start decluttered, O(n^2) layout
+  var showAll = !HUGE;               // every table renders unless the schema is enormous
   var state = {
     layout: (TOTAL > 600 ? "ring" : "web"),
     filter: "", sel: null, hover: null
@@ -115,11 +116,32 @@
 
   function layoutRing(list) {
     var order = list.slice().sort(function (a, b) { return (a.g - b.g) || a.name.localeCompare(b.name); });
-    var R = 430, pos = {};
+    var R = 360, pos = {};
     order.forEach(function (n, i) {
       var t = (i / order.length) * Math.PI * 2 - Math.PI / 2;
       pos[n.id] = { x: Math.cos(t) * R, y: Math.sin(t) * R, a: t };
     });
+    return pos;
+  }
+
+  // CLUSTERS — one compact grid per prefix group, groups placed around a ring
+  function layoutGrid(list) {
+    var pos = {}, R = 380;
+    for (var gi = 0; gi < NG; gi++) {
+      var mem = list.filter(function (n) { return n.g === gi; });
+      if (!mem.length) continue;
+      mem.sort(function (a, b) { return a.name.localeCompare(b.name); });
+      var ang = (gi / NG) * Math.PI * 2 - Math.PI / 2;
+      var cx = Math.cos(ang) * R, cy = Math.sin(ang) * R * 0.86;
+      var cols = Math.max(1, Math.ceil(Math.sqrt(mem.length * 1.4)));
+      var rows = Math.ceil(mem.length / cols);
+      var gap = 26;
+      mem.forEach(function (n, i) {
+        var gx = (i % cols) - (cols - 1) / 2;
+        var gy = Math.floor(i / cols) - (rows - 1) / 2;
+        pos[n.id] = { x: cx + gx * gap, y: cy + gy * gap };
+      });
+    }
     return pos;
   }
 
@@ -140,7 +162,7 @@
     links.forEach(function (l) {
       if (idx[l.a] != null && idx[l.b] != null) LL.push([idx[l.a], idx[l.b]]);
     });
-    var ITERS = n > 400 ? 160 : 300;
+    var ITERS = n > 700 ? 90 : n > 400 ? 150 : 300;
     for (var it = 0; it < ITERS; it++) {
       var alpha = 1 - it / ITERS;
       for (var p = 0; p < n; p++) {
@@ -172,7 +194,7 @@
     var rad = [];
     for (var r = 0; r < n; r++) rad.push(Math.hypot(px[r] - cx, py[r] - cy));
     var r92 = rad.slice().sort(function (a, b) { return a - b; })[Math.floor(n * 0.92)] || 1;
-    var s = 470 / r92, cap = r92 * 1.25, pos = {};
+    var s = 360 / r92, cap = r92 * 1.25, pos = {};
     for (var w = 0; w < n; w++) {
       var ddx = px[w] - cx, ddy = py[w] - cy, rr = Math.hypot(ddx, ddy) || 1;
       if (rr > cap) { ddx *= cap / rr; ddy *= cap / rr; }
@@ -184,8 +206,12 @@
   var LAYOUTS = {};
   function buildLayouts() {
     var list = activeNodes();
-    if (list.length <= 10) { LAYOUTS = { web: layoutRadial(list), ring: layoutRadial(list) }; return; }
-    LAYOUTS = { web: layoutWeb(list), ring: layoutRing(list) };
+    if (list.length <= 10) {
+      var rad = layoutRadial(list);
+      LAYOUTS = { web: rad, ring: rad, grid: rad };
+      return;
+    }
+    LAYOUTS = { web: layoutWeb(list), ring: layoutRing(list), grid: layoutGrid(list) };
   }
   buildLayouts();
 
@@ -210,6 +236,9 @@
     dpr = window.devicePixelRatio || 1;
     canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssH * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if ((cssW < 40 || cssH < 40) && !resize._retry) {   // layout not settled yet
+      resize._retry = requestAnimationFrame(function () { resize._retry = 0; resize(); fit(); draw(); });
+    }
   }
 
   function bbox() {
@@ -220,7 +249,7 @@
              x1: Math.max.apply(null, xs), y1: Math.max.apply(null, ys) };
   }
   function fit() {
-    var b = bbox(), pad = 70;
+    var b = bbox(), pad = 46;
     var w = (b.x1 - b.x0) || 1, h = (b.y1 - b.y0) || 1;
     var k = Math.min((cssW - pad * 2) / w, (cssH - pad * 2) / h);
     view.k = Math.max(0.15, Math.min(9, k));
@@ -238,7 +267,7 @@
   function nodeR(n) {
     var base = 1.6 + Math.log10(n.rows + 10) * 0.72 + n.deg * 0.14;
     base = Math.max(2.1, Math.min(9, base));
-    return base * Math.max(0.6, Math.min(1.7, view.k));
+    return base * Math.max(0.85, Math.min(1.8, view.k));
   }
 
   function focusId() {
@@ -488,22 +517,40 @@
     });
   });
 
-  // show-all toggle (large schemas only)
+  // live "showing X / Y" count
+  var COUNT = document.getElementById("tw-count");
+  function updateCount() {
+    if (!COUNT) return;
+    var shown = activeNodes().length;
+    COUNT.textContent = (shown === TOTAL)
+      ? TOTAL + (TOTAL === 1 ? " table" : " tables")
+      : shown + " / " + TOTAL + " tables";
+  }
+
+  // declutter toggle — show every table vs. only the FK-linked ones
   var SHOWALL = document.getElementById("tw-showall");
-  if (LARGE) {
+  if (LARGE && SHOWALL) {
     SHOWALL.hidden = false;
-    var hiddenCount = TOTAL - activeNodes().length;
-    SHOWALL.textContent = "show all (" + TOTAL + ")";
-    SHOWALL.title = hiddenCount + " isolated table(s) hidden";
+    var linked = nodes.filter(function (n) { return n.deg >= 1; }).length;
+    function labelToggle() {
+      SHOWALL.classList.toggle("on", !showAll);
+      SHOWALL.textContent = showAll
+        ? "FK-linked only (" + linked + ")"
+        : "show all " + TOTAL;
+      SHOWALL.title = showAll
+        ? "hide the " + (TOTAL - linked) + " tables with no foreign keys"
+        : "showing only tables that participate in a foreign key";
+    }
+    labelToggle();
     SHOWALL.addEventListener("click", function () {
       showAll = !showAll;
-      SHOWALL.classList.toggle("on", showAll);
-      SHOWALL.textContent = showAll ? "showing all (" + TOTAL + ")" : "show all (" + TOTAL + ")";
+      labelToggle();
       buildLayouts();
       applyLayout(state.layout, false);
-      fit(); draw();
+      updateCount(); fit(); draw();
     });
   }
+  updateCount();
 
   // panel → select linked table
   PANEL.addEventListener("click", function (e) {

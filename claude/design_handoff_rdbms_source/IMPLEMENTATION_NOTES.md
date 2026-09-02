@@ -10,7 +10,7 @@ revisit later:
 | # | Handoff says | Built | Why |
 |---|---|---|---|
 | Motion | permanent rAF loop, animated links, 16 traveling dots | one ~300-iter force pass on load (160 for n>400), static render; bounded rAF only for the layout-switch ease + selection pulse | answer 1 |
-| Layouts | WEB / RING / CLUSTERS | WEB + RING only; RING sorts by (prefix-group, name) so groups stay adjacent | answer 4 |
+| Layouts | WEB / RING / CLUSTERS | all three (CLUSTERS re-added 2026-09-02 after user feedback); RING sorts by (prefix-group, name), CLUSTERS = a grid per prefix group around a ring | answer 4 → reversed on request |
 | Node colour | 6 semantic clusters, colour-coded | single `--accent`, size by `reltuples`, glow on hub/selection/filter-match; prefix groups drive only the WEB gravity anchors + a **neutral** legend | answer 3 |
 | Scale | tuned for 186/400 | >200 nodes → only degree≥1 shown + "show all (N)" toggle; >600 → default RING; ≤10 → radial, no sim | answer 5 |
 | Connect card | artboard 1d adds a table-picker list, target-name field, DATE PARTITION toggle, EXTRACTION STRATEGY tiles | none of those added — cosmetic restyle only | answer 7 / "backend frozen" |
@@ -30,6 +30,25 @@ revisit later:
   the old `.rdbms-web` SVG + `selectWebNode` handlers in `app.js`.
 - The panel route re-queries `fk_edges` + `list_tables` per selection. Cheap for
   normal schemas; fold into one call or cache on the session if it ever matters.
+
+## Fixes after first live test (2026-09-02)
+
+User saw "maybe ten tables" on a ~186-table schema and "it looks off":
+- **Root cause 1 — the `>200` FK-only default.** Answer 5's declutter hid every
+  table without a foreign key by default, with no visible cue. Changed: every
+  table renders up to 1500 nodes (`HUGE`); the toggle is now an opt-in
+  *"FK-linked only (N)"* declutter, shown whenever `TOTAL > 220`. A live
+  **`X / Y` count chip** in the toolbar shows what's rendered vs. total.
+- **Root cause 2 — FIT crammed the graph into a sliver.** The stage was 520px
+  min-height, the layout normalised to ~940 units wide, and FIT padded 70px, so
+  a tall schema fit at k≈0.4 → a 340px knot of 1px dots. Changed: stage
+  min-height 600 (card 720), WEB normalise 470→360, RING R 430→360, FIT pad
+  70→46, node min zoom-factor 0.6→0.85. A 186-node schema now fits at k≈0.7 and
+  fills ~620px with ~25px node spacing.
+- **CLUSTERS re-added** as the third layout (grid per prefix group).
+- `resize()` retries on the next frame if the canvas measures < 40px (layout
+  not settled).
+- `web_json` now escapes `<` as `<` (defensive, inline `<script>` JSON).
 
 ## Open items / things to address later
 
