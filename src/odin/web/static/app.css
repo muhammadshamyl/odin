@@ -1322,10 +1322,15 @@ li.CodeMirror-hint-active{background:var(--phos-soft); color:var(--text)}
   overflow:hidden; position:relative;
 }
 .tweb-panel{
-  flex:1 1 320px; max-width:560px; align-self:stretch;
+  /* fixed width + min-width:0 so a wide sample table inside can't inflate the
+     flex item and bump the panel onto its own row below the graph */
+  flex:0 0 340px; min-width:0; align-self:stretch;
+  display:flex; flex-direction:column; overflow:hidden;
   background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
-  padding:18px 18px 20px; min-height:0;
+  padding:18px 18px 20px;
 }
+.tweb-panel > *{ flex:none }
+.tweb-panel .pnl-empty{ flex:1 }
 .tweb-corner{position:absolute; top:0; left:0; width:14px; height:14px; pointer-events:none; z-index:3}
 .tweb-corner::before,.tweb-corner::after{content:""; position:absolute; background:var(--accent)}
 .tweb-corner::before{width:14px; height:1px}
@@ -1429,13 +1434,14 @@ li.CodeMirror-hint-active{background:var(--phos-soft); color:var(--text)}
   border:1px solid var(--border);
 }
 .pnl-linked .dir.out{color:var(--accent)} .pnl-linked .dir.in{color:var(--ok)}
-.pnl-linked .lk .nm{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.pnl-linked .lk .via{color:var(--text-faint); font-size:10px}
+.pnl-linked .lk{min-width:0}
+.pnl-linked .lk .nm{flex:none; max-width:45%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.pnl-linked .lk .via{flex:1; min-width:0; color:var(--text-faint); font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .tweb-panel .pnl-foot{margin-top:16px}
 .tweb-panel .pnl-foot .btn{width:100%; justify-content:center}
 .tweb-panel .pnl-foot .fn{font:400 10px/1.5 var(--font); color:var(--text-faint); margin-top:7px; text-align:center}
 
-@media (max-width:1100px){ .tweb-panel{flex-basis:100%; max-width:none} }
+@media (max-width:1100px){ .tweb-panel{flex:1 1 100%; width:100%; overflow:visible} }
 
 /* connection test result strips (handoff §4 / §5) */
 .conn-strip{

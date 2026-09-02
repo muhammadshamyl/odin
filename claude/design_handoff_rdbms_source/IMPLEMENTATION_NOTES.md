@@ -116,6 +116,20 @@ Both fixed:
 - 100 distinct categorical colours isn't useful (indistinguishable past ~12), so
   the cap is "curated + hashed", not a 100-entry table.
 
+## Preview panel jumped below the graph on select (2026-09-02)
+
+`.tweb-panel` was `flex:1 1 320px` with no `min-width:0`. The fetched panel holds
+the sample table (`.pnl-sample td` is `min-width:104px; white-space:nowrap`), so
+a 12-column table gave the flex item a ~1250px min-content width → it no longer
+fit beside the graph → `flex-wrap` dropped it onto its own row below.
+
+Fixed: `.tweb-panel` is now `flex:0 0 340px; min-width:0; display:flex;
+flex-direction:column; overflow:hidden`. Fixed width, can't be inflated by inner
+content, stays beside the graph. Sample + linked-tables sub-blocks keep their own
+`max-height` + `overflow:auto` (h- and v-scroll). Linked-row `.via` is now
+`nowrap` + ellipsis so a long FK path can't push width either. Below 1100px the
+panel still stacks full-width under the graph.
+
 ## Open items / things to address later
 
 1. **Fonts.** Answer 10's premise ("Chakra Petch not loaded") is wrong — `base.html`
